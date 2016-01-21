@@ -19,7 +19,7 @@ This will store your a JSON file per collection in `./backups/year/month/day/hou
 
 download all collections from `myfirebaseapp.firebaseio.com`.
 
-> node src backup --all --firebase studyloop-stage --secret abcdefg123456
+> node src backup --all --firebase myfirebaseapp --secret abcdefg123456
 
 ###Some TODOs:
 

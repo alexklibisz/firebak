@@ -62,21 +62,18 @@ export async function collectionToCSVFile({ firebase, collection, filename, secr
 
   let store = {};
 
-
   // Function takes all store contents, convert them to CSV format, and write to file.
   function storeToFile() {
     const paths = Object.keys(store);
     const csvLines = paths.map(path => `"${path}", "${store[path]}"`);
     fs.appendFileSync(filename, csvLines.join('\n'), 'utf8');
     store = {};
-    console.log(`${collection}: storing ${csvLines.length} entries`);
   }
 
   // First line of the CSV
   fs.writeFileSync(filename, `"path", "value"`, 'utf8');
 
   while(nextPaths.length > 0) {
-    console.log(nextPaths.length);
     // Take the first 100 paths to make requests.
     const paths = nextPaths.splice(0, 100);
     // Create an array of requests.

@@ -1,0 +1,36 @@
+{
+  "name": "firesafe",
+  "version": "0.0.0",
+  "description": "Firebase backup and restoration CLI",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --require babel-register --require babel-polyfill index.js",
+    "test": "test"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.9.0",
+    "bluebird": "^3.1.1",
+    "commander": "^2.9.0",
+    "firebase-cli": "^1.2.0",
+    "lodash": "^4.0.0"
+  },
+  "babel": {
+    "presets": [
+      "es2015"
+    ],
+    "plugins": [
+      "syntax-async-functions",
+      "transform-regenerator"
+    ]
+  },
+  "devDependencies": {
+    "babel-core": "^6.4.5",
+    "babel-plugin-syntax-async-functions": "^6.3.13",
+    "babel-plugin-transform-regenerator": "^6.4.4",
+    "babel-polyfill": "^6.3.14",
+    "babel-preset-es2015": "^6.3.13",
+    "babel-register": "^6.4.3"
+  }
+}

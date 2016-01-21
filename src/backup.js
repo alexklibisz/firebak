@@ -25,7 +25,16 @@ export default async function backup({
 
   // Populate the collections array if it is not supplied or the all argument is true.
   if(collections.length === 0 && all) {
-    collections = keys((await ax.get(`https://${firebase}.firebaseio.com/.json?format=export&shallow=true&auth=${secret}`)).data);
+
+    const result = await ax.get(`https://${firebase}.firebaseio.com/.json`, {
+      params: {
+        format: 'export',
+        auth: secret,
+        shallow: true
+      }
+    });
+
+    collections = keys(result.data);
   }
 
   // Create the destination directory if it doesn't exist.
@@ -57,8 +66,7 @@ export default async function backup({
  */
 export async function collectionToFile({ firebase, collection, filename, secret } = {}) {
 
-  const limitTo = 50,
-    baseURL = `https://${firebase}.firebaseio.com/${collection}.json?format=export&auth=${secret}&orderBy="$key"`;
+  const limitTo = 50;
   let startAt = 0, length = limitTo, total = 0;
 
   // Begin the JSON file

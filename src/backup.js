@@ -112,6 +112,8 @@ export async function collectionToCSVFile({ firebase, collection, filename, secr
   // Store the remaining entries.
   storeToFile();
 
+  console.log(`complete: ${collection}`);
+
 };
 
 

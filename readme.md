@@ -26,3 +26,4 @@ download all collections from `myfirebaseapp.firebaseio.com`.
 - improve the CLI (required options, usage instructions)
 - implement restore function (should read files incrementally and POST each individual record).
 - unit tests (will probably use two separate firebases, populate the first, backup and restore to second, then compare)
+- make it an npm module

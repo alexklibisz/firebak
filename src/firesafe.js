@@ -34,44 +34,7 @@ program.command('backup [collections...]')
 program.command('restore')
   .description('restore a collection')
   .action((cmd) => {
-    console.log(program.auth);
-    console.log('restore');
+    console.log('TODO :)');
   });
 
 program.parse(process.argv)
-
-// console.log(program);
-
-// import ax from 'axios';
-// import {keys, assign} from 'lodash';
-// import fs from 'fs';
-//
-// const secret = process.env.FIREBASE_SECRET;
-// const url = 'https://studyloop-stage.firebaseio.com';
-//
-//
-// async function collectionToFile(collection, fileName) {
-//   console.log(`${collection} started`);
-//   fs.writeFileSync(fileName, '{', 'utf8');
-//   let startAt = 0, limitTo = 50, length = limitTo;
-//   while (length === limitTo) {
-//     const res = await ax.get(`${url}/${collection}.json?auth=${secret}&orderBy="$key"&startAt="${startAt}"&limitTo="${limitTo}"`);
-//     const items = keys(res.data).map(key => `"${key}": ${JSON.stringify(res.data[key])}`).join();
-//     fs.appendFileSync(fileName, items, 'utf8');
-//     length = keys(res.data).length;
-//     startAt = startAt + limitTo;
-//   }
-//   fs.appendFileSync(fileName, '}', 'utf8');
-//   console.log(`${collection} finished`);
-// }
-//
-// async function main() {
-//
-//   const res = await ax.get(`${url}/.json?format=export&auth=${secret}&shallow=true`);
-//   const collections = keys(res.data);
-//
-//   collections.forEach(async (collection) => collectionToFile(collection, `back-${collection}.json`));
-//
-// }
-//
-// main();

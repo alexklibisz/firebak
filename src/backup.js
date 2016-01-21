@@ -3,6 +3,18 @@ import ax from 'axios';
 import {keys} from 'lodash';
 import fs from 'fs';
 
+/**
+ * backup function
+ * Creates the list of firebase collections if it wasn't passed or if the all argument was specified.
+ * Creates the destination directory structure.
+ * Loops over the collections and call collectionToFile on each one.
+ * @param  {[type]} {                         firebase         =             ''            [description]
+ * @param  {[type]} secret      =             ''               [description]
+ * @param  {[type]} collections =             []               [description]
+ * @param  {[type]} all         =             false            [description]
+ * @param  {[type]} destination =             `./backups/${new Date(         [description]
+ * @return {[type]}             [description]
+ */
 export default async function backup({
   firebase = '',
   secret = '',
@@ -31,6 +43,18 @@ export default async function backup({
 
 }
 
+/**
+ * collectionToFile function.
+ * Incrementally request data from firebase using firebase REST api.
+ * Requests 50 records at a time for the passed collection.
+ * Creates a JSON file "on the fly", appending the data to the file as
+ * records are fetched instead of storing everything in memory.
+ * @param  {[type]} {          firebase      [description]
+ * @param  {[type]} collection [description]
+ * @param  {[type]} filename   [description]
+ * @param  {[type]} secret     }             =             {} [description]
+ * @return {[type]}            [description]
+ */
 export async function collectionToFile({ firebase, collection, filename, secret } = {}) {
 
   const limitTo = 50,

@@ -28,4 +28,5 @@ download all collections from `myfirebaseapp.firebaseio.com`.
 - add integration with AWS S3 to push and pull backups
 - implement restore function (should read files incrementally and POST each individual record).
 - unit tests (will probably use two separate firebases, populate the first, backup and restore to second, then compare)
+- backup the firebase rules (also a simple GET request)
 - make it an npm module

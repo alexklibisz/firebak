@@ -2,7 +2,12 @@
 
 Firebase to JSON backup and restore. Incrementally downloads your firebase collections via the Firebase REST API and stores them as JSON files.
 
-This is very much a work in progress.
+###Use cases
+- small to medium Firebase backup and restores (basically anything up to the plan that actually includes backups).
+
+###Work in progress.
+
+This is very much a work in progress, but if you find it valuable and want some things implemented, please open up an issue.
 
 ###Usage:
 

@@ -27,7 +27,7 @@ program.command('backup [collections...]')
         secret: program.secret
       });
     } catch(error) {
-      console.error(error);
+      console.error(error.toString());
     }
   });
 

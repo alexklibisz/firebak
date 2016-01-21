@@ -1,6 +1,6 @@
 'use strict';
 import ax from 'axios';
-// import {keys} from 'lodash';
+import {keys, zip} from 'lodash';
 import fs from 'fs';
 import Promise from 'bluebird';
 
@@ -47,16 +47,22 @@ export default async function backup({
   collections.forEach(collection => {
     const filename = `${destination}/${collection}.csv`;
     collectionToCSVFile({ firebase, collection, filename, secret });
-    // const filename = `${destination}/${collection}.json`;
-    // collectionToJSONFile({ firebase, collection, filename, secret });
   });
 
 }
 
 export async function collectionToCSVFile({ firebase, collection, filename, secret } = {}) {
 
-  let store = {}, nextPaths = [collection];
+  const
+    store = {},
+    nextPaths = [collection],
+    params = {
+      shallow: true,
+      auth: secret,
+      format: 'export'
+    };
 
+  // Function takes all store contents, convert them to CSV format, and write to file.
   function storeToFile() {
     const paths = Object.keys(store);
     const csvLines = paths.map(path => `"${path}", "${store[path]}"`);
@@ -64,26 +70,44 @@ export async function collectionToCSVFile({ firebase, collection, filename, secr
     store = {};
   }
 
+  // First line of the CSV
   fs.writeFileSync(filename, `"path", "value"`, 'utf8');
 
   while(nextPaths.length > 0) {
-    const path = nextPaths.shift(),
-      result = await ax.get(`https://${firebase}.firebaseio.com/${path}.json`, {
-        params: {
-          shallow: true,
-          auth: secret,
-          format: 'export'
-        }
-      }),
-      data = result.data;
 
-    if (typeof data === 'object') {
-      Object.keys(data).forEach(key => nextPaths.push(`${path}/${key}`));
-    } else {
-      store[path] = data;
+    // Take the first 10 paths to make requests.
+    const paths = nextPaths.splice(0, 10);
+    // Create an array of requests.
+    const requests = paths.map(path => ax.get(`https://${firebase}.firebaseio.com/${path}.json`, { params }));
+    // Execute the requests.
+    const results = await Promise.all(requests);
+
+    // Iterate over the corresponding paths and requests
+    zip(paths, results).forEach(pair => {
+      // Deconstruct the zipped pair
+      const path = pair[0], data = pair[1].data;
+      // Returned an error
+      if (data instanceof Error) {
+        store[path] = data.toString();
+        console.error(data.toString());
+      }
+      // Returned an object, push each of the keys onto next paths
+      else if (typeof data === 'object') {
+        keys(data).forEach(key => nextPaths.push(`${path}/${key}`));
+      }
+      // Returned a JSON primitive (an actual value), store it.
+      else {
+        store[path] = data;
+      }
+    });
+
+    // When the store contain more than a 1000 entries, empty it into a file.
+    if (keys(store).length > 1000) {
+      storeToFile();
     }
   }
 
+  // Store the remaining entries.
   storeToFile();
 
 };

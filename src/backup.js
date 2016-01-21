@@ -55,6 +55,42 @@ export default async function backup({
 
 export async function collectionToCSVFile({ firebase, collection, filename, secret } = {}) {
 
+  let store = {}, nextPaths = [collection];
+
+  function storeToFile() {
+    const paths = Object.keys(store);
+    const csvLines = paths.map(path => `"${path}", "${store[path]}"`);
+    fs.appendFileSync(filename, csvLines.join('\n'), 'utf8');
+    store = {};
+  }
+
+  fs.writeFileSync(filename, `"path", "value"`, 'utf8');
+
+  while(nextPaths.length > 0) {
+    const path = nextPaths.shift(),
+      result = await ax.get(`https://${firebase}.firebaseio.com/${path}.json`, {
+        params: {
+          shallow: true,
+          auth: secret,
+          format: 'export'
+        }
+      }),
+      data = result.data;
+
+    if (typeof data === 'object') {
+      Object.keys(data).forEach(key => nextPaths.push(`${path}/${key}`));
+    } else {
+      store[path] = data;
+    }
+  }
+
+  storeToFile();
+
+};
+
+
+export async function collectionToCSVFileRecursive({ firebase, collection, filename, secret } = {}) {
+
   let store = {};
 
   fs.writeFileSync(filename, `"path", "value"`, 'utf8');

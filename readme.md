@@ -2,8 +2,9 @@
 
 Firebase to JSON backup and restore. Incrementally downloads your firebase collections via the Firebase REST API and stores them as JSON files.
 
-###Use cases
+###Intended Use cases
 - small to medium Firebase backup and restores (basically anything up to the plan that actually includes backups).
+- run it on an AWS or Heroku instance as a cronjob then push the backups to S3 for storage.
 
 ###Work in progress.
 
@@ -24,6 +25,7 @@ download all collections from `myfirebaseapp.firebaseio.com`.
 ###Some TODOs:
 
 - improve the CLI (required options, usage instructions)
+- add integration with AWS S3 to push and pull backups
 - implement restore function (should read files incrementally and POST each individual record).
 - unit tests (will probably use two separate firebases, populate the first, backup and restore to second, then compare)
 - make it an npm module

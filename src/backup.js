@@ -2,12 +2,13 @@
 import ax from 'axios';
 import {keys} from 'lodash';
 import fs from 'fs';
+import Promise from 'bluebird';
 
 /**
  * backup function
  * Creates the list of firebase collections if it wasn't passed or if the all argument was specified.
  * Creates the destination directory structure.
- * Loops over the collections and call collectionToFile on each one.
+ * Loops over the collections and call collectionToJSONFile on each one.
  * @param  {[type]} {                         firebase         =             ''            [description]
  * @param  {[type]} secret      =             ''               [description]
  * @param  {[type]} collections =             []               [description]
@@ -25,7 +26,6 @@ export default async function backup({
 
   // Populate the collections array if it is not supplied or the all argument is true.
   if(collections.length === 0 && all) {
-
     const result = await ax.get(`https://${firebase}.firebaseio.com/.json`, {
       params: {
         format: 'export',
@@ -33,7 +33,6 @@ export default async function backup({
         shallow: true
       }
     });
-
     collections = keys(result.data);
   }
 
@@ -44,16 +43,49 @@ export default async function backup({
     if (!fs.existsSync(currentDir)) fs.mkdirSync(currentDir);
   }
 
-  // Loop over the collections, creating a file for each one via collectionToFile function.
+  // Loop over the collections, creating a file for each one via collectionToJSONFile function.
   collections.forEach(collection => {
-    const filename = `${destination}/${collection}.json`;
-    collectionToFile({ firebase, collection, filename, secret });
+    const filename = `${destination}/${collection}.csv`;
+    collectionToCSVFile({ firebase, collection, filename, secret });
+    // const filename = `${destination}/${collection}.json`;
+    // collectionToJSONFile({ firebase, collection, filename, secret });
   });
 
 }
 
+export async function collectionToCSVFile({ firebase, collection, filename, secret } = {}) {
+
+  const store = {};
+
+  async function getPath({ path }) {
+
+    const result = await ax.get(`https://${firebase}.firebaseio.com/${path}.json`, {
+      params: {
+        shallow: true,
+        auth: secret,
+        format: 'export'
+      }
+    });
+
+    const {data} = result;
+
+    if (typeof data === 'object') {
+      const next = keys(data).map(key => getPath({ path: `${path}/${key}`}));
+      await Promise.all(next);
+    } else {
+      store[path] = data;
+    }
+
+  }
+
+  await getPath({ path: collection });
+  console.log('done');
+  console.log(store);
+};
+
+
 /**
- * collectionToFile function.
+ * collectionToJSONFile function.
  * Incrementally request data from firebase using firebase REST api.
  * Requests 50 records at a time for the passed collection.
  * Creates a JSON file "on the fly", appending the data to the file as
@@ -64,7 +96,7 @@ export default async function backup({
  * @param  {[type]} secret     }             =             {} [description]
  * @return {[type]}            [description]
  */
-export async function collectionToFile({ firebase, collection, filename, secret } = {}) {
+export async function collectionToJSONFile({ firebase, collection, filename, secret } = {}) {
 
   const limitTo = 50;
   let startAt = 0, length = limitTo, total = 0;

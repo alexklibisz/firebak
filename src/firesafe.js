@@ -14,7 +14,6 @@ program.version(pkg.version)
   .option('--secret <auth>', 'Authentication secret for firebase. If not supplied, looks for process.env.FIREBASE_SECRET');
 
 // TODO: make firebase a required option
-
 program.command('backup [collections...]')
   .description('backup a collection or all collections')
   .action((collections) => {
@@ -31,10 +30,22 @@ program.command('backup [collections...]')
     }
   });
 
-program.command('restore')
+program.command('restore [collections...]')
   .description('restore a collection')
-  .action((cmd) => {
-    console.log('TODO :)');
+  .action((collections) => {
+    try {
+      restore({
+        all: program.all,
+        collections,
+        firebase: program.firebase,
+        secret: program.secret,
+        source: program.source
+      });
+    } catch(error) {
+      console.log('error caught');
+      console.error(error);
+      console.error(error.toString());
+    }
   });
 
 program.parse(process.argv)

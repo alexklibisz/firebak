@@ -1,6 +1,6 @@
 'use strict';
 import ax from 'axios';
-import {keys} from 'lodash';
+// import {keys} from 'lodash';
 import fs from 'fs';
 import Promise from 'bluebird';
 
@@ -33,7 +33,7 @@ export default async function backup({
         shallow: true
       }
     });
-    collections = keys(result.data);
+    collections = Object.keys(result.data);
   }
 
   // Create the destination directory if it doesn't exist.
@@ -55,32 +55,44 @@ export default async function backup({
 
 export async function collectionToCSVFile({ firebase, collection, filename, secret } = {}) {
 
-  const store = {};
+  let store = {};
+
+  fs.writeFileSync(filename, `"path", "value"`, 'utf8');
+
+  function storeToFile() {
+    const paths = Object.keys(store);
+    const csvLines = paths.map(path => `"${path}", "${store[path]}"`);
+    fs.appendFileSync(filename, csvLines.join('\n'), 'utf8');
+    store = {};
+  }
 
   async function getPath({ path }) {
-
     const result = await ax.get(`https://${firebase}.firebaseio.com/${path}.json`, {
       params: {
         shallow: true,
         auth: secret,
         format: 'export'
       }
-    });
-
-    const {data} = result;
+    }),
+    {data} = result;
 
     if (typeof data === 'object') {
-      const next = keys(data).map(key => getPath({ path: `${path}/${key}`}));
+      const next = Object.keys(data).map(key => getPath({ path: `${path}/${key}`}));
       await Promise.all(next);
     } else {
+      console.log(path);
       store[path] = data;
+    }
+
+    if (Object.keys(store).length > 100) {
+      storeToFile();
     }
 
   }
 
   await getPath({ path: collection });
+  storeToFile();
   console.log('done');
-  console.log(store);
 };
 
 
@@ -118,11 +130,11 @@ export async function collectionToJSONFile({ firebase, collection, filename, sec
     });
 
     // Convert the result to a json key: {} pair and append to file.
-    const json = keys(result.data).map(key => `"${key}": ${JSON.stringify(result.data[key])}`).join();
+    const json = Object.keys(result.data).map(key => `"${key}": ${JSON.stringify(result.data[key])}`).join();
     fs.appendFileSync(filename, json, 'utf8');
 
     // Increment values for next loop.
-    length = keys(result.data).length;
+    length = Object.keys(result.data).length;
     total += length;
     startAt += limitTo;
   }

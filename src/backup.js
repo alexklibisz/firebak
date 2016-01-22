@@ -63,7 +63,7 @@ export async function collectionToCSVFile({ firebase, collection, filename, secr
       format: 'export'
     };
 
-  let store = {}, totalPathsStored = 0;
+  let store = {}, totalPathsStored = 0, totalRequestTime = 0;
 
   // Function takes all store contents, convert them to CSV format, and write to file.
   function storeToFile() {
@@ -82,7 +82,10 @@ export async function collectionToCSVFile({ firebase, collection, filename, secr
     // Create an array of requests and execute them.
     const paths = nextPaths.splice(0, 100);
     const requests = paths.map(path => ax.get(`https://${firebase}.firebaseio.com/${path}.json`, { params }));
+    const t = new Date().getTime();
     const results = await Promise.all(requests);
+    totalRequestTime += (new Date().getTime() - t);
+    console.log(totalRequestTime / 1000);
 
     // Iterate over the corresponding paths and requests
     // If the resulting data is an object, concatenate each of those keys onto its
@@ -107,6 +110,6 @@ export async function collectionToCSVFile({ firebase, collection, filename, secr
   // Store the remaining data.
   storeToFile();
 
-  console.log(`complete: ${collection}, stored ${totalPathsStored} paths`);
+  console.log(`complete: ${collection}, paths stored: ${totalPathsStored}, total request time: ${totalRequestTime / 1000}`);
 
 };

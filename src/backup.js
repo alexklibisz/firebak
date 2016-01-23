@@ -5,16 +5,16 @@ import fs from 'fs';
 import Promise from 'bluebird';
 
 /**
- * backup function
+ * Backup command function
  * Creates the list of firebase collections if it wasn't passed or if the all argument was specified.
  * Creates the destination directory structure.
  * Loops over the collections and call collectionToJSONFile on each one.
- * @param  {[type]} {                         firebase         =             ''            [description]
- * @param  {[type]} secret      =             ''               [description]
- * @param  {[type]} collections =             []               [description]
- * @param  {[type]} all         =             false            [description]
- * @param  {[type]} destination =             `./backups/${new Date(         [description]
- * @return {[type]}             [description]
+ * @param  {[spec]} {                         firebase         =             ''            [description]
+ * @param  {[spec]} secret      =             ''               [description]
+ * @param  {[spec]} collections =             []               [description]
+ * @param  {[spec]} all         =             false            [description]
+ * @param  {[spec]} destination =             `./backups/${new Date(         [description]
+ * @return {[spec]}             [description]
  */
 export default async function backup({
   firebase = '',
@@ -24,7 +24,7 @@ export default async function backup({
   destination = `./backups/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${new Date().getDate()}/${new Date().getHours()}`
 } = {}) {
 
-  const backups = await getBackupsFromRules({ firebase, secret });
+  const backupSpecs = await getBackupSpecs({ firebase, secret });
 
   // Create the destination directory if it doesn't exist.
   let dirs = destination.split('/'), currentDir = '';
@@ -33,38 +33,27 @@ export default async function backup({
     if (!fs.existsSync(currentDir)) fs.mkdirSync(currentDir);
   }
 
-  while(backups.length > 0) {
-    const backup = backups.shift();
-    const filename = `${destination}/${backup.path}.csv`;
-    await shardedBackupToFile({ path: backup.path, type: backup.type, secret, firebase, filename });
+  // Loop through the backup specs using a while loop.
+  // Take the first spec on each iteration.
+  // Using a while loop so that the await keyword is respected.
+  // A for-each loop would launch all of the shardedBackupToFile
+  // functions concurrently.
+  while(backupSpecs.length > 0) {
+    const
+      backup = backupSpecs.shift(),
+      filename = `${destination}/${backup.path}.csv`;
+    await shardedBackupToFile({ path: backup.path, spec: backup.spec, secret, firebase, filename });
   }
 }
 
-// Flatten an object into a new object where each key
-// is the path to the corresponding data in the first object.
-// e.g. { a: { b: 1 } } becomes { 'a/b': 1 }
-function flattenObject(object, path) {
-  const flat = {};
-  function visitChildren(innerObject, innerPath) {
-    Object.keys(innerObject).forEach(key => {
-      if(typeof innerObject[key] === 'object') {
-        visitChildren(innerObject[key], `${innerPath}/${key}`);
-      } else {
-        flat[`${innerPath}/${key}`] = innerObject[key];
-      }
-    });
-  }
-  visitChildren(object, path);
-  return flat;
-}
+async function shardedBackupToFile({ firebase, path, spec, secret, filename }) {
+  // Define parameters for retrieving from the REST API
+  // limitToFirst must be >= 2, otherwise it will retrieve the same data every time.
+  const limitToFirst = Math.max(parseInt(spec.split(':')[2]), 2);
+  let startAt = "", count = limitToFirst, store = {}, maxRequestSize = 0, totalRequestSize = 0;
 
-async function shardedBackupToFile({ firebase, path, type, secret, filename }) {
-  const limitToFirst = parseInt(type.split(':')[2]);
-  let startAt = "";
-  let count = limitToFirst;
-  let store = {};
-
-  // Function for appending the store object data to file
+  // Function for appending the store object data to the CSV file
+  // Writes each key in the store object as the first col and the value as the second col.
   function storeToFile() {
     const paths = Object.keys(store);
     const csvLines = paths.map(path => `"${path}", "${store[path]}"`);
@@ -72,9 +61,10 @@ async function shardedBackupToFile({ firebase, path, type, secret, filename }) {
     store = {};
   }
 
-  // Write initial line to file (write not append is important)
+  // Write initial line to file (must use write, not append)
   fs.writeFileSync(filename, '"path", "object"\n');
 
+  // Call the REST API until you receive fewer results than limitToFirst
   while(count === limitToFirst) {
     const result = await ax.get(`https://${firebase}.firebaseio.com/${path}.json`, {
       params: {
@@ -86,6 +76,11 @@ async function shardedBackupToFile({ firebase, path, type, secret, filename }) {
       }
     });
 
+    // Update request sizes
+    maxRequestSize = Math.max(maxRequestSize, parseInt(result.headers['content-length']));
+    totalRequestSize += parseInt(result.headers['content-length']);
+
+    // The returned objects are located in result.data.
     // Flatten each of the returned objects and store it in the store
     keys(result.data).forEach(key => {
       const flat = flattenObject(result.data[key], `${path}/${key}`);
@@ -99,16 +94,26 @@ async function shardedBackupToFile({ firebase, path, type, secret, filename }) {
     count = keys(result.data).length;
     startAt = keys(result.data).sort().pop();
 
-    // Log some output for info.
-    console.log(path, count, startAt);
+    console.info(path, count, startAt);
   }
 
-  // Store the remainder
+  // Store the remainder and log some info
   storeToFile();
+  console.info(`complete: ${path}`);
+  console.info(`max request size: ${maxRequestSize / 1000000} mb (${maxRequestSize} bytes)`);
+  console.info(`total request size: ${totalRequestSize / 1000000} mb (${totalRequestSize} bytes)`)
 
 }
 
-async function getBackupsFromRules({ firebase, secret }) {
+/**
+ * Retrieves the security/validation rules for the specified firebase.
+ * Looks for keys with string "backup:", because these define backup specs.
+ * Returns all of the paths that should be backed up.
+ * @param  {[type]} {      firebase      [description]
+ * @param  {[type]} secret }             [description]
+ * @return {[type]}        [description]
+ */
+async function getBackupSpecs({ firebase, secret }) {
   // Fetch the rules
   const rulesResult = await ax.get(`https://${firebase}.firebaseio.com/.settings/rules/.json`, {
     params: {
@@ -116,42 +121,44 @@ async function getBackupsFromRules({ firebase, secret }) {
     }
   });
 
-  // Convert the rules to an array,
-  // Remove any comments for each line,
-  // Convert back to a string
+  // Convert the rules to an array, remove any comments per line,
+  // and convert back to a string (JSON format).
   const rulesString = rulesResult.data.split('\n')
     .map(line => {
       if (line.indexOf('//') > -1) {
         line = line.slice(0, line.indexOf('//'));
       }
       if (line.indexOf('/*') > -1) {
-        const head = line.slice(0, line.indexOf('/*'));
-        const tail = line.slice(line.indexOf('*/') + 2, line.length);
+        const
+          head = line.slice(0, line.indexOf('/*')),
+          tail = line.slice(line.indexOf('*/') + 2, line.length);
         return head + tail;
       }
       return line.trim();
     })
     .join('');
 
-  // Rules are now in parseable JSON format, convert rules to object
+  // Rules are now in parseable JSON format, convert rules to an object
   const rulesObject = JSON.parse(rulesString);
 
-  // Recursively visit all children in the object and
-  // store any paths the have a "backup:..." key
+  // Recursively visit all paths in the rules object.
+  // Push any paths containing 'backup:' into the backupPaths array.
+  // This is similar but not quite the same as flattenObject function.
   const backupPaths = [];
-  function findBackups(object, path = '') {
-    if(path.indexOf('backup:') > -1) backupPaths.push(path);
-    const keys = Object.keys(object);
-    keys.forEach(key => {
+  function findBackupPaths(object, path = '') {
+    if(path.indexOf('backup:') > -1) {
+      backupPaths.push(path);
+    }
+    Object.keys(object).forEach(key => {
       if(typeof object[key] === 'object') {
-        findBackups(object[key], `${path}/${key}`);
+        findBackupPaths(object[key], `${path}/${key}`);
       }
     });
   }
 
-  findBackups(rulesObject.rules);
+  findBackupPaths(rulesObject.rules);
 
-  /* Sample backupPaths after calling findBackups():
+  /* Sample backupPaths after calling findBackupPaths():
     [ '/users/backup:shard:20',
     '/user-settings/backup:shard:20',
     '/courses/backup:shard:20',
@@ -159,76 +166,30 @@ async function getBackupsFromRules({ firebase, secret }) {
     '/rooms/backup:shard:10',
     '/room-messages/backup:shard:1' ] */
 
-  // Return an array of objects with form { children: 'some/path/to/children', type: 'backup:shard:10' }
+  // Return an array of objects with form { children: 'some/path/to/children', spec: 'backup:shard:10' }
   return backupPaths.map(bp => {
-    const split = bp.split('/');
+    const split = bp.split('/').filter(s => s.length > 0);
     return {
-      path: split.splice(0, Math.max(1, split.length - 1)).filter(c => c.length > 0).join('/'),
-      type: split.pop()
+      path: split.splice(0, Math.max(1, split.length - 1)).join('/'),
+      spec: split.pop()
     }
   });
 }
 
-export async function collectionToCSVFile({ firebase, collection, filename, secret } = {}) {
-
-  console.log(`starting: ${collection}`);
-
-  const nextPaths = [collection],
-    params = {
-      shallow: true,
-      auth: secret,
-      format: 'export'
-    };
-
-  let store = {}, totalPathsStored = 0, totalRequestTime = 0, totalPathsRequested = 0;
-
-  // Function takes all store contents, convert them to CSV format, and write to file.
-  function storeToFile() {
-    const paths = Object.keys(store);
-    const csvLines = paths.map(path => `"${path}", "${store[path]}"`);
-    fs.appendFileSync(filename, csvLines.join('\n'), 'utf8');
-    store = {};
-  }
-
-  // First line of the CSV
-  fs.writeFileSync(filename, `"path", "value"`, 'utf8');
-
-  while(nextPaths.length > 0) {
-    console.log(collection, nextPaths.length);
-    // Take the first 100 paths to make requests.
-    // Create an array of requests and execute them.
-    const paths = nextPaths.splice(0, 1200);
-    const requests = paths.map(path => ax.get(`https://${firebase}.firebaseio.com/${path}.json`, { params }));
-    const t = new Date().getTime();
-    const results = await Promise.all(requests);
-    totalPathsRequested += requests.length;
-    totalRequestTime += (new Date().getTime() - t);
-    console.log(totalRequestTime / 1000);
-
-    // Iterate over the corresponding paths and requests
-    // If the resulting data is an object, concatenate each of those keys onto its
-    // corresponding path and push that onto nextPaths. Otherwise, it is a piece
-    // of data that should be stored with its path.
-    zip(paths, results).forEach(pair => {
-      console.log(pair[1]);
-      const path = pair[0], data = pair[1].data;
-      if (typeof data === 'object') {
-        keys(data).forEach(key => nextPaths.push(`${path}/${key}`));
+// Flatten a passed object into a return object where each key in the return object
+// is the path to the corresponding data in the passed object.
+// e.g. { a: { b: 1 } } becomes { 'a/b': 1 }
+function flattenObject(object, path = '') {
+  const flat = {};
+  function visitChildren(innerObject, innerPath) {
+    Object.keys(innerObject).forEach(key => {
+      if(typeof innerObject[key] === 'object') {
+        visitChildren(innerObject[key], `${innerPath}/${key}`);
       } else {
-        store[path] = data;
-        totalPathsStored += 1;
+        flat[`${innerPath}/${key}`] = innerObject[key];
       }
     });
-
-    // When the store contain more than a 1000 entries, empty it into a file.
-    if (keys(store).length > 1000) {
-      storeToFile();
-    }
   }
-
-  // Store the remaining data.
-  storeToFile();
-
-  console.log(`complete: ${collection}, paths requested: ${totalPathsRequested}, paths stored: ${totalPathsStored}, request time: ${totalRequestTime / 1000}`);
-
-};
+  visitChildren(object, path);
+  return flat;
+}

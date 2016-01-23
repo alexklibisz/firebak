@@ -3,6 +3,8 @@ import ax from 'axios';
 import Firebase from 'firebase';
 import Fireproof from 'fireproof';
 import path from 'path';
+import fs from 'fs';
+import Promise from 'bluebird';
 Fireproof.promise = require('bluebird');
 
 export default async function restore({
@@ -13,31 +15,38 @@ export default async function restore({
   source
 } = {}) {
 
+  // Get ref and authenticate
+  const ref = new Fireproof(new Firebase(`https://${firebase}.firebaseio.com`));
+  const authData = await ref.authWithCustomToken(secret);
+
   source = path.resolve('.', source);
 
-  console.log(authData);
-
   while (collections.length > 0) {
-    const collection = collections.shift();
-    const filename = `${source}/${collection}.csv`;
+    const
+      collection = collections.shift(),
+      filename = `${source}/${collection}.csv`;
+    await restoreFromCSV({ ref, filename });
+    console.log(`complete: ${collection}`);
+  }
+  
+  process.exit(0);
+}
+
+export async function restoreFromCSV({ filename, ref } = {}) {
+
+  const fileContents = fs.readFileSync(filename, 'utf8');
+  const rows = fileContents.split('\n').filter(l => l.length > 0);
+
+  while(rows.length > 0) {
+    const
+      restoreRows = rows.splice(0, 100),
+      promises = restoreRows.map(row => {
+        const
+          path = row.split(', ')[0].replace(/"/g,""),
+          value = row.split(', ')[1].replace(/"/g,"");
+        return ref.child(path).set(value);
+      });
+    await Promise.all(promises);
   }
 
-  // For each collection, read from the corresponding CSV file in the source directory.
-  // For each path in the file, post the value to that path in Firebase.
-
 }
-//
-// export aysnc function csvFileToJSON({
-//   firebase, collection, secret, filename
-// } = {}) {
-//
-//   // Get ref and authenticate
-//   const ref = new Fireproof(new Firebase(`https://${firebase}.firebaseio.com`));
-//   const authData = await ref.authWithCustomToken(secret);
-//
-//   // Stream the file in. For each path, check if the value exists.
-//   // If it doesn't exist, set it.
-//
-//
-//
-// }

@@ -86,7 +86,7 @@ async function shardedBackupToFile({ firebase, path, spec, secret, filename }) {
   }
 
   // Write initial line to file (must use write, not append)
-  fs.writeFileSync(filename, '"path", "object"\n');
+  fs.writeFileSync(filename, '', 'utf8');
 
   // Call the REST API until you receive fewer results than limitToFirst
   while(count === limitToFirst) {

@@ -2,8 +2,9 @@
 import ax from 'axios';
 import {keys, values} from 'lodash';
 import fs from 'fs';
-// import Promise from 'bluebird';
 import path from 'path';
+import sizeof from 'object-sizeof';
+import Table from 'cli-table';
 
 /**
  * Backup command function
@@ -26,7 +27,7 @@ export default async function backup({
 } = {}) {
 
   const backupSpecs = await getBackupSpecs({ firebase, secret });
-  let maxRequestSize = 0, totalRequestSize = 0;
+  let maxRequestSize = 0, totalRequestSize = 0, totalObjects = 0, totalDuration = 0;
 
   // Create the destination directory if it doesn't exist.
   destination = path.resolve('.', destination);
@@ -36,10 +37,15 @@ export default async function backup({
     if (!fs.existsSync(currentDir)) fs.mkdirSync(currentDir);
   }
 
-  console.info(`storing backups in directory: ${destination}`);
+  const introTable = new Table();
+  introTable.push({'date/time': new Date().toLocaleString() });
+  console.info(' >> Firechunk Backup');
+  console.info(introTable.toString());
 
   // Backup the rules
+  console.info(' >> Backup starting: rules');
   await backupRules({ firebase, secret, filename: `${destination}/rules.json` });
+  console.info(' >> Backup complete: rules\n\n');
 
   // Loop through the backup specs using a while loop.
   // Take the first spec on each iteration.
@@ -47,40 +53,66 @@ export default async function backup({
   // A for-each loop would launch all of the shardedBackupToFile
   // functions concurrently.
   while(backupSpecs.length > 0) {
+    const backup = backupSpecs.shift();
+
+    console.info(` >> Backup starting: ${backup.path}`);
+
     const
-      backup = backupSpecs.shift(),
       filename = `${destination}/${backup.path}.csv`,
+      t1 = new Date().getTime(),
       result = await shardedBackupToFile({ path: backup.path, spec: backup.spec, secret, firebase, filename });
 
-    // Log info from this backup.
-    console.info(`complete: ${backup.path}`);
-    console.info(`max request size: ${result.maxRequestSize / 1000000} mb (${result.maxRequestSize} bytes)`);
-    console.info(`total request size: ${result.totalRequestSize / 1000000} mb (${result.totalRequestSize} bytes)`);
-    console.info('======');
+    const t2 = new Date().getTime(),
+      tableComplete = new Table();
+
+    tableComplete.push(
+      {'file': filename },
+      {'rule': backup.spec },
+      {'duration (sec)': (t2 - t1) / 1000 },
+      {'max request size (mb)': result.maxRequestSize / 1000000},
+      {'total request size (mb)': result.totalRequestSize / 1000000},
+      {'total objects (not counting nested)': result.totalObjects}
+    );
+
+    console.info(` >> Backup complete: ${backup.path}`);
+    console.info(tableComplete.toString() + '\n\n');
 
     // Update aggregate sizes
     maxRequestSize = Math.max(maxRequestSize, result.maxRequestSize);
     totalRequestSize += result.totalRequestSize;
+    totalObjects += result.totalObjects;
+    totalDuration += (t2 - t1) / 1000;
   }
 
-  console.info(`complete: all collections`);
-  console.info(`max request size: ${maxRequestSize / 1000000} mb (${maxRequestSize} bytes)`);
-  console.info(`total request size: ${totalRequestSize / 1000000} mb (${totalRequestSize} bytes)`);
-  console.info('======');
-
+  const table = new Table();
+  table.push(
+    {'total duration (sec)': totalDuration },
+    {'max request size (mb)': maxRequestSize / 1000000 },
+    {'total request size (mb)': totalRequestSize / 1000000 },
+    { 'total objects (not counting nested)': totalObjects }
+  );
+  console.info(' >> Backup complete: all collections');
+  console.info(table.toString());
 }
 
 async function shardedBackupToFile({ firebase, path, spec, secret, filename }) {
   // Define parameters for retrieving from the REST API
   // limitToFirst must be >= 2, otherwise it will retrieve the same data every time.
-  const limitToFirst = Math.max(parseInt(spec.split(':')[2]), 2);
-  let startAt = "", count = limitToFirst, store = {}, maxRequestSize = 0, totalRequestSize = 0;
+  const limitToFirst = Math.max(parseInt(spec.split(':')[2]), 2), allKeys = {};
+  let
+    store = {},
+    startAt = "",
+    count = limitToFirst,
+    maxRequestSize = 0,
+    totalRequestSize = 0;
 
   // Function for appending the store object data to the CSV file
   // Writes each key in the store object as the first col and the value as the second col.
+  // Then clear the store
   function storeToFile() {
-    const paths = Object.keys(store);
-    const csvLines = paths.map(path => `"${path}", "${store[path]}"`);
+    const
+      paths = keys(store),
+      csvLines = paths.map(path => `"${path}", "${store[path]}"`);
     fs.appendFileSync(filename, csvLines.join('\n'), 'utf8');
     store = {};
   }
@@ -100,13 +132,18 @@ async function shardedBackupToFile({ firebase, path, spec, secret, filename }) {
       }
     });
 
-    // Update request sizes
-    maxRequestSize = Math.max(maxRequestSize, parseInt(result.headers['content-length']));
-    totalRequestSize += parseInt(result.headers['content-length']);
+    const
+      dataKeys = keys(result.data),
+      requestSize = sizeof(result.data);
+
+    // Update bookkeeping stuff.
+    maxRequestSize = Math.max(maxRequestSize, requestSize);
+    totalRequestSize += requestSize;
+    dataKeys.forEach(key => allKeys[key] = true);
 
     // The returned objects are located in result.data.
     // Flatten each of the returned objects and store it in the store
-    keys(result.data).forEach(key => {
+    dataKeys.forEach(key => {
       const flat = flattenObject(result.data[key], `${path}/${key}`);
       keys(flat).forEach(key => store[key] = flat[key]);
     });
@@ -115,17 +152,15 @@ async function shardedBackupToFile({ firebase, path, spec, secret, filename }) {
     if (keys(store).length > 200) storeToFile();
 
     // Update count and startAt for next loop
-    count = keys(result.data).length;
-    startAt = keys(result.data).sort().pop();
-
-    console.info(path, count, startAt);
+    count = dataKeys.length;
+    startAt = dataKeys.sort().pop();
   }
 
   // Store the remainder and log some info
   storeToFile();
 
   // return the request sizes
-  return { maxRequestSize, totalRequestSize };
+  return { maxRequestSize, totalRequestSize, totalObjects: keys(allKeys).length };
 }
 
 async function backupRules({ firebase, secret, filename }) {
@@ -135,8 +170,6 @@ async function backupRules({ firebase, secret, filename }) {
     }
   });
   fs.writeFileSync(filename, JSON.stringify(rulesResult.data, null, 2), 'utf8');
-  console.info('complete: rules');
-  console.info('======');
 }
 
 /**
@@ -183,7 +216,7 @@ async function getBackupSpecs({ firebase, secret }) {
     if(path.indexOf('backup:') > -1) {
       backupPaths.push(path);
     }
-    Object.keys(object).forEach(key => {
+    keys(object).forEach(key => {
       if(typeof object[key] === 'object') {
         findBackupPaths(object[key], `${path}/${key}`);
       }
@@ -216,7 +249,7 @@ async function getBackupSpecs({ firebase, secret }) {
 function flattenObject(object, path = '') {
   const flat = {};
   function visitChildren(innerObject, innerPath) {
-    Object.keys(innerObject).forEach(key => {
+    keys(innerObject).forEach(key => {
       if(typeof innerObject[key] === 'object') {
         visitChildren(innerObject[key], `${innerPath}/${key}`);
       } else {

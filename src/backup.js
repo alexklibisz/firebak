@@ -26,44 +26,52 @@ export default async function backup({
 
   const backups = await getBackupsFromRules({ firebase, secret });
 
-  console.log(backups);
+  // Create the destination directory if it doesn't exist.
+  let dirs = destination.split('/'), currentDir = '';
+  while(dirs.length > 0) {
+    currentDir += dirs.shift() + '/'
+    if (!fs.existsSync(currentDir)) fs.mkdirSync(currentDir);
+  }
 
-  // while(backupPaths.length > 0) {
-  //   const path = backupPaths.shift().split('/'),
-  //     children = chil;
-  //
-  //   const split = path.split('/');
-  //   const type = split.pop();
-  //   const children = split.join('/');
-  //   console.log(children, type);
-  // }
+  while(backups.length > 0) {
+    const backup = backups.shift();
+    const filename = `${destination}/${backup.path}.csv`;
+    await shardedBackupToFile({ path: backup.path, type: backup.type, secret, firebase, filename });
+  }
+}
 
-  // Populate the collections array if it is not supplied or the all argument is true.
-  // if(collections.length === 0 && all) {
-  //   const result = await ax.get(`https://${firebase}.firebaseio.com/.json`, {
-  //     params: {
-  //       format: 'export',
-  //       auth: secret,
-  //       shallow: true
-  //     }
-  //   });
-  //   collections = Object.keys(result.data);
-  // }
-  //
-  // // Create the destination directory if it doesn't exist.
-  // let dirs = destination.split('/'), currentDir = '';
-  // while(dirs.length > 0) {
-  //   currentDir += dirs.shift() + '/'
-  //   if (!fs.existsSync(currentDir)) fs.mkdirSync(currentDir);
-  // }
-  //
-  // // Loop over the collections, creating a file for each one via collectionToJSONFile function.
-  // // Using a while loop to prevent multiple collectionToCSVFile functions from firing concurrently.
-  // while (collections.length > 0) {
-  //   const collection = collections.pop();
-  //   const filename = `${destination}/${collection}.csv`;
-  //   await collectionToCSVFile({ firebase, collection, filename, secret });
-  // }
+/*
+limit = 10, start = "", count = limit
+while count == limit:
+ results = GET /users.json? format=export & orderBy="$key" & startAt = start & First = limit
+ store the results
+ count = results.length
+ start = key of the last result
+ */
+
+async function shardedBackupToFile({ firebase, path, type, secret, filename }) {
+  const limitToFirst = parseInt(type.split(':')[2]);
+  let startAt = "";
+  let count = limitToFirst;
+  while(count === limitToFirst) {
+    const result = await ax.get(`https://${firebase}.firebaseio.com/${path}.json`, {
+      params: {
+        auth: secret,
+        format: `export`,
+        orderBy: `"$key"`,
+        startAt: `"${startAt}"`,
+        limitToFirst
+      }
+    });
+    count = keys(result.data).length;
+
+    console.log(startAt, path, count, count === limitToFirst);
+
+    startAt = keys(result.data).sort().pop();
+    
+  }
+
+
 }
 
 async function getBackupsFromRules({ firebase, secret }) {
@@ -121,7 +129,7 @@ async function getBackupsFromRules({ firebase, secret }) {
   return backupPaths.map(bp => {
     const split = bp.split('/');
     return {
-      children: split.splice(0, Math.max(1, split.length - 1)).filter(c => c.length > 0).join('/'),
+      path: split.splice(0, Math.max(1, split.length - 1)).filter(c => c.length > 0).join('/'),
       type: split.pop()
     }
   });

@@ -1,6 +1,6 @@
 'use strict';
 Promise = require('bluebird');
-Promise.onPossiblyUnhandledRejection(function (error) { throw error; });
+Promise.onPossiblyUnhandledRejection(function (error) { console.error(JSON.stringify(error)); throw error; });
 import program from 'commander';
 import pkg from '../package.json';
 import backup from './backup';

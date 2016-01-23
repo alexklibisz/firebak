@@ -1,8 +1,9 @@
 'use strict';
 import ax from 'axios';
-import {keys, zip, values} from 'lodash';
+import {keys, values} from 'lodash';
 import fs from 'fs';
-import Promise from 'bluebird';
+// import Promise from 'bluebird';
+import path from 'path';
 
 /**
  * Backup command function
@@ -19,7 +20,7 @@ import Promise from 'bluebird';
 export default async function backup({
   firebase = '',
   secret = '',
-  collections = [],
+  // collections = [],
   all = false,
   destination = `./backups/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${new Date().getDate()}/${new Date().getHours()}`
 } = {}) {
@@ -27,11 +28,17 @@ export default async function backup({
   const backupSpecs = await getBackupSpecs({ firebase, secret });
 
   // Create the destination directory if it doesn't exist.
+  destination = path.resolve('.', destination);
   let dirs = destination.split('/'), currentDir = '';
   while(dirs.length > 0) {
     currentDir += dirs.shift() + '/'
     if (!fs.existsSync(currentDir)) fs.mkdirSync(currentDir);
   }
+
+  console.info(`storing backups in directory: ${destination}`);
+
+  // Backup the rules
+  await backupRules({ firebase, secret, filename: `${destination}/rules.json` });
 
   // Loop through the backup specs using a while loop.
   // Take the first spec on each iteration.
@@ -101,8 +108,20 @@ async function shardedBackupToFile({ firebase, path, spec, secret, filename }) {
   storeToFile();
   console.info(`complete: ${path}`);
   console.info(`max request size: ${maxRequestSize / 1000000} mb (${maxRequestSize} bytes)`);
-  console.info(`total request size: ${totalRequestSize / 1000000} mb (${totalRequestSize} bytes)`)
+  console.info(`total request size: ${totalRequestSize / 1000000} mb (${totalRequestSize} bytes)`);
+  console.info('======');
 
+}
+
+async function backupRules({ firebase, secret, filename }) {
+  const rulesResult = await ax.get(`https://${firebase}.firebaseio.com/.settings/rules/.json`, {
+    params: {
+      auth: secret
+    }
+  });
+  fs.writeFileSync(filename, JSON.stringify(rulesResult.data, null, 2), 'utf8');
+  console.info('complete: rules');
+  console.info('======');
 }
 
 /**

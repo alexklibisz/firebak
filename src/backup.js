@@ -26,6 +26,7 @@ export default async function backup({
 } = {}) {
 
   const backupSpecs = await getBackupSpecs({ firebase, secret });
+  let maxRequestSize = 0, totalRequestSize = 0;
 
   // Create the destination directory if it doesn't exist.
   destination = path.resolve('.', destination);
@@ -48,9 +49,25 @@ export default async function backup({
   while(backupSpecs.length > 0) {
     const
       backup = backupSpecs.shift(),
-      filename = `${destination}/${backup.path}.csv`;
-    await shardedBackupToFile({ path: backup.path, spec: backup.spec, secret, firebase, filename });
+      filename = `${destination}/${backup.path}.csv`,
+      result = await shardedBackupToFile({ path: backup.path, spec: backup.spec, secret, firebase, filename });
+
+    // Log info from this backup.
+    console.info(`complete: ${backup.path}`);
+    console.info(`max request size: ${result.maxRequestSize / 1000000} mb (${result.maxRequestSize} bytes)`);
+    console.info(`total request size: ${result.totalRequestSize / 1000000} mb (${result.totalRequestSize} bytes)`);
+    console.info('======');
+
+    // Update aggregate sizes
+    maxRequestSize = Math.max(maxRequestSize, result.maxRequestSize);
+    totalRequestSize += result.totalRequestSize;
   }
+
+  console.info(`complete: all collections`);
+  console.info(`max request size: ${maxRequestSize / 1000000} mb (${maxRequestSize} bytes)`);
+  console.info(`total request size: ${totalRequestSize / 1000000} mb (${totalRequestSize} bytes)`);
+  console.info('======');
+
 }
 
 async function shardedBackupToFile({ firebase, path, spec, secret, filename }) {
@@ -106,11 +123,9 @@ async function shardedBackupToFile({ firebase, path, spec, secret, filename }) {
 
   // Store the remainder and log some info
   storeToFile();
-  console.info(`complete: ${path}`);
-  console.info(`max request size: ${maxRequestSize / 1000000} mb (${maxRequestSize} bytes)`);
-  console.info(`total request size: ${totalRequestSize / 1000000} mb (${totalRequestSize} bytes)`);
-  console.info('======');
 
+  // return the request sizes
+  return { maxRequestSize, totalRequestSize };
 }
 
 async function backupRules({ firebase, secret, filename }) {

@@ -24,22 +24,19 @@ export default async function backup({
   destination = `./backups/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${new Date().getDate()}/${new Date().getHours()}`
 } = {}) {
 
-  const backupPaths = await getBackupPaths({ firebase, secret });
-  console.log(backupPaths);
+  const backups = await getBackupsFromRules({ firebase, secret });
 
-  // function recursiveIteration(object) {
-  //   for (var property in object) {
-  //     if (object.hasOwnProperty(property)) {
-  //       if (typeof object[property] == "object"){
-  //         recursiveIteration(object[property]);
-  //       }else{
-  //         // console.log(property);
-  //       }
-  //     }
-  //   }
-  // }
+  console.log(backups);
+
+  // while(backupPaths.length > 0) {
+  //   const path = backupPaths.shift().split('/'),
+  //     children = chil;
   //
-  // recursiveIteration(rulesObject);
+  //   const split = path.split('/');
+  //   const type = split.pop();
+  //   const children = split.join('/');
+  //   console.log(children, type);
+  // }
 
   // Populate the collections array if it is not supplied or the all argument is true.
   // if(collections.length === 0 && all) {
@@ -69,7 +66,7 @@ export default async function backup({
   // }
 }
 
-async function getBackupPaths({ firebase, secret }) {
+async function getBackupsFromRules({ firebase, secret }) {
   // Fetch the rules
   const rulesResult = await ax.get(`https://${firebase}.firebaseio.com/.settings/rules/.json`, {
     params: {
@@ -110,8 +107,24 @@ async function getBackupPaths({ firebase, secret }) {
     });
   }
 
-  findBackups(rulesObject);
-  return backupPaths;
+  findBackups(rulesObject.rules);
+
+  /* Sample backupPaths after calling findBackups():
+    [ '/users/backup:shard:20',
+    '/user-settings/backup:shard:20',
+    '/courses/backup:shard:20',
+    '/universities/backup:shard:20',
+    '/rooms/backup:shard:10',
+    '/room-messages/backup:shard:1' ] */
+
+  // Return an array of objects with form { children: 'some/path/to/children', type: 'backup:shard:10' }
+  return backupPaths.map(bp => {
+    const split = bp.split('/');
+    return {
+      children: split.splice(0, Math.max(1, split.length - 1)).filter(c => c.length > 0).join('/'),
+      type: split.pop()
+    }
+  });
 }
 
 export async function collectionToCSVFile({ firebase, collection, filename, secret } = {}) {

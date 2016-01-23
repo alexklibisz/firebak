@@ -24,32 +24,94 @@ export default async function backup({
   destination = `./backups/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${new Date().getDate()}/${new Date().getHours()}`
 } = {}) {
 
+  const backupPaths = await getBackupPaths({ firebase, secret });
+  console.log(backupPaths);
+
+  // function recursiveIteration(object) {
+  //   for (var property in object) {
+  //     if (object.hasOwnProperty(property)) {
+  //       if (typeof object[property] == "object"){
+  //         recursiveIteration(object[property]);
+  //       }else{
+  //         // console.log(property);
+  //       }
+  //     }
+  //   }
+  // }
+  //
+  // recursiveIteration(rulesObject);
+
   // Populate the collections array if it is not supplied or the all argument is true.
-  if(collections.length === 0 && all) {
-    const result = await ax.get(`https://${firebase}.firebaseio.com/.json`, {
-      params: {
-        format: 'export',
-        auth: secret,
-        shallow: true
+  // if(collections.length === 0 && all) {
+  //   const result = await ax.get(`https://${firebase}.firebaseio.com/.json`, {
+  //     params: {
+  //       format: 'export',
+  //       auth: secret,
+  //       shallow: true
+  //     }
+  //   });
+  //   collections = Object.keys(result.data);
+  // }
+  //
+  // // Create the destination directory if it doesn't exist.
+  // let dirs = destination.split('/'), currentDir = '';
+  // while(dirs.length > 0) {
+  //   currentDir += dirs.shift() + '/'
+  //   if (!fs.existsSync(currentDir)) fs.mkdirSync(currentDir);
+  // }
+  //
+  // // Loop over the collections, creating a file for each one via collectionToJSONFile function.
+  // // Using a while loop to prevent multiple collectionToCSVFile functions from firing concurrently.
+  // while (collections.length > 0) {
+  //   const collection = collections.pop();
+  //   const filename = `${destination}/${collection}.csv`;
+  //   await collectionToCSVFile({ firebase, collection, filename, secret });
+  // }
+}
+
+async function getBackupPaths({ firebase, secret }) {
+  // Fetch the rules
+  const rulesResult = await ax.get(`https://${firebase}.firebaseio.com/.settings/rules/.json`, {
+    params: {
+      auth: secret
+    }
+  });
+
+  // Convert the rules to an array,
+  // Remove any comments for each line,
+  // Convert back to a string
+  const rulesString = rulesResult.data.split('\n')
+    .map(line => {
+      if (line.indexOf('//') > -1) {
+        line = line.slice(0, line.indexOf('//'));
+      }
+      if (line.indexOf('/*') > -1) {
+        const head = line.slice(0, line.indexOf('/*'));
+        const tail = line.slice(line.indexOf('*/') + 2, line.length);
+        return head + tail;
+      }
+      return line.trim();
+    })
+    .join('');
+
+  // Rules are now in parseable JSON format, convert rules to object
+  const rulesObject = JSON.parse(rulesString);
+
+  // Recursively visit all children in the object and
+  // store any paths the have a "backup:..." key
+  const backupPaths = [];
+  function findBackups(object, path = '') {
+    if(path.indexOf('backup:') > -1) backupPaths.push(path);
+    const keys = Object.keys(object);
+    keys.forEach(key => {
+      if(typeof object[key] === 'object') {
+        findBackups(object[key], `${path}/${key}`);
       }
     });
-    collections = Object.keys(result.data);
   }
 
-  // Create the destination directory if it doesn't exist.
-  let dirs = destination.split('/'), currentDir = '';
-  while(dirs.length > 0) {
-    currentDir += dirs.shift() + '/'
-    if (!fs.existsSync(currentDir)) fs.mkdirSync(currentDir);
-  }
-
-  // Loop over the collections, creating a file for each one via collectionToJSONFile function.
-  // Using a while loop to prevent multiple collectionToCSVFile functions from firing concurrently.
-  while (collections.length > 0) {
-    const collection = collections.pop();
-    const filename = `${destination}/${collection}.csv`;
-    await collectionToCSVFile({ firebase, collection, filename, secret });
-  }
+  findBackups(rulesObject);
+  return backupPaths;
 }
 
 export async function collectionToCSVFile({ firebase, collection, filename, secret } = {}) {
@@ -92,6 +154,7 @@ export async function collectionToCSVFile({ firebase, collection, filename, secr
     // corresponding path and push that onto nextPaths. Otherwise, it is a piece
     // of data that should be stored with its path.
     zip(paths, results).forEach(pair => {
+      console.log(pair[1]);
       const path = pair[0], data = pair[1].data;
       if (typeof data === 'object') {
         keys(data).forEach(key => nextPaths.push(`${path}/${key}`));

@@ -26,7 +26,7 @@ program.command('backup [collections...]')
         secret: program.secret
       });
     } catch(error) {
-      console.error('erra', error.toString());
+      console.error('error!', error.toString());
     }
   });
 
@@ -42,7 +42,7 @@ program.command('restore [collections...]')
         source: program.source
       });
     } catch(error) {
-      console.error('erra', error.toString());
+      console.error('error!', error.toString());
     }
   });
 

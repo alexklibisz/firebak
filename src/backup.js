@@ -1,6 +1,6 @@
 'use strict';
 import ax from 'axios';
-import {keys, zip} from 'lodash';
+import {keys, zip, values} from 'lodash';
 import fs from 'fs';
 import Promise from 'bluebird';
 
@@ -40,19 +40,41 @@ export default async function backup({
   }
 }
 
-/*
-limit = 10, start = "", count = limit
-while count == limit:
- results = GET /users.json? format=export & orderBy="$key" & startAt = start & First = limit
- store the results
- count = results.length
- start = key of the last result
- */
+// Flatten an object into a new object where each key
+// is the path to the corresponding data in the first object.
+// e.g. { a: { b: 1 } } becomes { 'a/b': 1 }
+function flattenObject(object, path) {
+  const flat = {};
+  function visitChildren(innerObject, innerPath) {
+    Object.keys(innerObject).forEach(key => {
+      if(typeof innerObject[key] === 'object') {
+        visitChildren(innerObject[key], `${innerPath}/${key}`);
+      } else {
+        flat[`${innerPath}/${key}`] = innerObject[key];
+      }
+    });
+  }
+  visitChildren(object, path);
+  return flat;
+}
 
 async function shardedBackupToFile({ firebase, path, type, secret, filename }) {
   const limitToFirst = parseInt(type.split(':')[2]);
   let startAt = "";
   let count = limitToFirst;
+  let store = {};
+
+  // Function for appending the store object data to file
+  function storeToFile() {
+    const paths = Object.keys(store);
+    const csvLines = paths.map(path => `"${path}", "${store[path]}"`);
+    fs.appendFileSync(filename, csvLines.join('\n'), 'utf8');
+    store = {};
+  }
+
+  // Write initial line to file (write not append is important)
+  fs.writeFileSync(filename, '"path", "object"\n');
+
   while(count === limitToFirst) {
     const result = await ax.get(`https://${firebase}.firebaseio.com/${path}.json`, {
       params: {
@@ -63,14 +85,26 @@ async function shardedBackupToFile({ firebase, path, type, secret, filename }) {
         limitToFirst
       }
     });
+
+    // Flatten each of the returned objects and store it in the store
+    keys(result.data).forEach(key => {
+      const flat = flattenObject(result.data[key], `${path}/${key}`);
+      keys(flat).forEach(key => store[key] = flat[key]);
+    });
+
+    // If there are more than 200 objects stored, call storeToFile()
+    if (keys(store).length > 200) storeToFile();
+
+    // Update count and startAt for next loop
     count = keys(result.data).length;
-
-    console.log(startAt, path, count, count === limitToFirst);
-
     startAt = keys(result.data).sort().pop();
-    
+
+    // Log some output for info.
+    console.log(path, count, startAt);
   }
 
+  // Store the remainder
+  storeToFile();
 
 }
 

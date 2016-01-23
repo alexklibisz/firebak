@@ -1,12 +1,12 @@
 {
-  "name": "firesafe",
-  "version": "0.0.0",
+  "name": "firebackup",
+  "version": "0.0.1",
   "description": "Firebase backup and restoration CLI",
   "main": "index.js",
   "scripts": {
     "test": "test"
   },
-  "author": "",
+  "author": "Alex Klibisz",
   "license": "MIT",
   "dependencies": {
     "axios": "^0.9.0",

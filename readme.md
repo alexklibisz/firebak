@@ -1,32 +1,46 @@
-# FireSafe
+# FireBak
 
-Firebase to JSON backup and restore. Incrementally downloads your firebase collections via the Firebase REST API and stores them as JSON files.
+Firebase backup and restore utility. Define the data you want to backup in your Firebase security rules. Backups and restore data incrementally (sharding requests) so as not to exceed Firebase request limits.
 
 ###Intended Use cases
-- small to medium Firebase backup and restores (basically anything up to the plan that actually includes backups).
-- run it on an AWS or Heroku instance as a cronjob then push the backups to S3 for storage.
+- backing up Firebases that are too large to simply export the root file.
+- backing up small to medium Firebases (anything up to the Bonfire plan which actually includes backups).
+- running backups with minimal memory usage on a cheap cloud instance (e.g. AWS EC2 micro instance) and pushing the files to cloud storage (e.g. AWS S3).
 
-###Work in progress.
+###Fair warning: work in progress
+This is a tool that I've built for a production-grade Firebase project that I'm on. That being said, it should still be considered a work-in-progress, and you should test it extensively for your use-case before committing to it. This is not in any way supported by Firebase. Obviously, I'm not responsible for any data loss that results from the use of this tool.
 
-This is very much a work in progress, but if you find it valuable and want some things implemented, please open up an issue.
+###Getting Started
+
+1. Install the `firebak` node module: `npm install firebak`.
+2. Go to your firebase security settings in the firebase dashboard.
+3. For any collection that you want to back up, define a rule `"firebak:shard:###": {}`. This rule is a no-op for the purposes of firebase, but it tells our scripts how many children should be requested at a time. For example, this `users` collection is backed up 100 objects at a time.
+```
+"users": {
+  ".read": "auth != null",
+  ".indexOn": ["email", "facebookId", "name"],
+  "firebak:shard:100": {},
+  "$userId": {
+    ...
+  }
+},
+```
+3. Use the `firebak backup` and `firebak restore` commands to backup and restore your collections:  
+> firebak backup --firebase [name of your firebase] --secret [your secret]  
+> firebak restore --all --source /path/to/backups/directory --firebase [name of your firebase] --secret [your secret]
+
+###Usage and Command Reference
+
+####Defining Firebak rules
+
+####Backup
+
+####Restore
 
 ###Usage:
 
-> node src backup [collections... | --all] --firebase my-firebase --secret <My firebase secret>
-
-This will store your a JSON file per collection in `./backups/year/month/day/hour`.
-
-###Example:
-
-download all collections from `myfirebaseapp.firebaseio.com`.
-
-> node src backup --all --firebase myfirebaseapp --secret abcdefg123456
-
-###Some TODOs:
+###TODO:
 
 - improve the CLI (required options, usage instructions)
-- add integration with AWS S3 to push and pull backups
-- implement restore function (should read files incrementally and POST each individual record).
-- unit tests (will probably use two separate firebases, populate the first, backup and restore to second, then compare)
-- backup the firebase rules (also a simple GET request)
-- make it an npm module
+- unit testing
+- sharding within `$variable` rules

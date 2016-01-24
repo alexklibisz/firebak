@@ -10,6 +10,7 @@ export default async function restore({
   all = false,
   collections = [],
   firebase = '',
+  rules = false,
   secret,
   source,
   overwrite
@@ -28,11 +29,29 @@ export default async function restore({
 
   source = path.resolve('.', source);
 
+  // If the all argument is true, map each of the csv files
+  // in the source directory to a collection.
+  // e.g. user.csv becomes the users collection.
   if (all) {
     const dir = fs.readdirSync(source);
     collections = dir.filter(f => f.endsWith('.csv')).map(f => f.split('.').shift());
   }
 
+  // Restore rules
+  if (rules) {
+    console.info(' >> Restore starting: rules');
+    const rules = require(`${source}/rules.json`);
+    await ax.put(`https://${firebase}.firebaseio.com/.settings/rules/.json`, rules, {
+      params: {
+        auth: secret
+      }
+    });
+    console.info(' >> Restore complete: rules');
+  }
+
+  // Loop over the collections and restore each one sequentially.
+  // Using a while loop to prevent launching the restoreFromCSV
+  // multiple times concurrently.
   while (collections.length > 0) {
     const
       collection = collections.shift(),

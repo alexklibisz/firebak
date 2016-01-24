@@ -32,7 +32,7 @@ _commander2.default.version(_package2.default.version)
 // Options that apply to only backup command
 .option('-d, --destination <destDir>', 'Backup: destination directory for storing backups.')
 // Options that apply to only restore command
-.option('-a, --all', 'Restore: restore all paths in the source directory.').option('-s, --source <sourceDir>', 'Restore: directory where the files being restored are located.').option('-o, --overwrite', 'Restore: overwrite values at an existing path. By default, restoring only sets a value if that path does not exist.');
+.option('-s, --source <sourceDir>', 'Restore: directory where the files being restored are located.').option('-a, --all', 'Restore: restore all paths in the source directory.').option('-r, --rules', 'Restore: restore rules from the rules.json file in the source directory.').option('-o, --overwrite', 'Restore: overwrite values at an existing path. By default, restoring only sets a value if that path does not exist.');
 
 // TODO: make firebase a required option
 _commander2.default.command('backup [collections...]').description('backup a collection or all collections').action(function (collections) {
@@ -54,6 +54,7 @@ _commander2.default.command('restore [collections...]').description('restore a c
       all: _commander2.default.all,
       collections: collections,
       firebase: _commander2.default.firebase,
+      rules: _commander2.default.rules,
       secret: _commander2.default.secret,
       source: _commander2.default.source,
       overwrite: _commander2.default.overwrite

@@ -15,8 +15,9 @@ program.version(pkg.version)
   // Options that apply to only backup command
   .option('-d, --destination <destDir>', 'Backup: destination directory for storing backups.')
   // Options that apply to only restore command
-  .option('-a, --all', 'Restore: restore all paths in the source directory.')
   .option('-s, --source <sourceDir>', 'Restore: directory where the files being restored are located.')
+  .option('-a, --all', 'Restore: restore all paths in the source directory.')
+  .option('-r, --rules', 'Restore: restore rules from the rules.json file in the source directory.')
   .option('-o, --overwrite', 'Restore: overwrite values at an existing path. By default, restoring only sets a value if that path does not exist.');
 
 // TODO: make firebase a required option
@@ -43,6 +44,7 @@ program.command('restore [collections...]')
         all: program.all,
         collections,
         firebase: program.firebase,
+        rules: program.rules,
         secret: program.secret,
         source: program.source,
         overwrite: program.overwrite

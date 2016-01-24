@@ -40,10 +40,14 @@ exports.default = function restore() {
   var collections = _ref$collections === undefined ? [] : _ref$collections;
   var _ref$firebase = _ref.firebase;
   var firebase = _ref$firebase === undefined ? '' : _ref$firebase;
+  var _ref$rules = _ref.rules;
+  var rules = _ref$rules === undefined ? false : _ref$rules;
   var secret = _ref.secret;
   var source = _ref.source;
   var overwrite = _ref.overwrite;
-  var ref, authData, introTable, dir, collection, filename;
+
+  var ref, authData, introTable, dir, _rules, collection, filename;
+
   return regeneratorRuntime.async(function restore$(_context) {
     while (1) {
       switch (_context.prev = _context.next) {
@@ -64,6 +68,9 @@ exports.default = function restore() {
 
           source = _path2.default.resolve('.', source);
 
+          // If the all argument is true, map each of the csv files
+          // in the source directory to a collection.
+          // e.g. user.csv becomes the users collection.
           if (all) {
             dir = _fs2.default.readdirSync(source);
 
@@ -74,31 +81,50 @@ exports.default = function restore() {
             });
           }
 
-        case 10:
+          // Restore rules
+
+          if (!rules) {
+            _context.next = 16;
+            break;
+          }
+
+          console.info(' >> Restore starting: rules');
+          _rules = require(source + '/rules.json');
+          _context.next = 15;
+          return regeneratorRuntime.awrap(_axios2.default.put('https://' + firebase + '.firebaseio.com/.settings/rules/.json', _rules, {
+            params: {
+              auth: secret
+            }
+          }));
+
+        case 15:
+          console.info(' >> Restore complete: rules');
+
+        case 16:
           if (!(collections.length > 0)) {
-            _context.next = 18;
+            _context.next = 24;
             break;
           }
 
           collection = collections.shift(), filename = source + '/' + collection + '.csv';
 
           console.log(' >> Restore starting: ' + collection);
-          _context.next = 15;
+          _context.next = 21;
           return regeneratorRuntime.awrap(restoreFromCSV({ ref: ref, filename: filename, overwrite: overwrite }));
 
-        case 15:
+        case 21:
           console.log(' >> Restore complete: ' + collection + '\n');
-          _context.next = 10;
+          _context.next = 16;
           break;
 
-        case 18:
+        case 24:
 
           // Force exit because otherwise the Firebase
           // ref remains open and causes the program to hang
           ref.unauth();
           process.exit(0);
 
-        case 20:
+        case 26:
         case 'end':
           return _context.stop();
       }

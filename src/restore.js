@@ -12,7 +12,7 @@ export default async function restore({
   firebase = '',
   secret,
   source,
-  override
+  overwrite
 } = {}) {
 
   // Get ref and authenticate
@@ -39,7 +39,7 @@ export default async function restore({
       collection = collections.shift(),
       filename = `${source}/${collection}.csv`;
     console.log(` >> Restore starting: ${collection}`);
-    await restoreFromCSV({ ref, filename });
+    await restoreFromCSV({ ref, filename, overwrite });
     console.log(` >> Restore complete: ${collection}\n`);
   }
 
@@ -60,11 +60,16 @@ export default async function restore({
  * @param  {[type]} ref }             =             {} [description]
  * @return {[type]}     [description]
  */
-export async function restoreFromCSV({ filename, ref, override = false } = {}) {
+export async function restoreFromCSV({ filename, ref, overwrite = false } = {}) {
 
   const
     fileContents = fs.readFileSync(filename, 'utf8'),
     rows = fileContents.split('\n').filter(l => l.length > 0);
+
+  async function setIfNull(path, value) {
+    const existingValue = await ref.child(path).once('value').then(snap => snap.val());
+    return (existingValue === null) ? await ref.child(path).set(value) : existingValue;
+  }
 
   while(rows.length > 0) {
     const
@@ -73,7 +78,11 @@ export async function restoreFromCSV({ filename, ref, override = false } = {}) {
         const
           path = row.split(', ')[0].replace(/"/g,""),
           value = row.split(', ')[1].replace(/"/g,"");
-        return ref.child(path).set(value);
+        if (overwrite === true) {
+          return ref.child(path).set(value)
+        } else {
+          return setIfNull(path, value);
+        }
       });
     await Promise.all(promises);
   }

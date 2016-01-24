@@ -26,7 +26,14 @@ Promise.onPossiblyUnhandledRejection(function (error) {
   console.error(JSON.stringify(error));throw error;
 });
 
-_commander2.default.version(_package2.default.version).option('-f, --firebase <firebase>', 'Firebase against which the program executes. Same as firebase CLI.').option('-a, --all', 'Backup all collections.').option('-s, --source <sourceDir>', 'Source JSON file for restoring a collection.').option('-d, --destination <destDir>', 'Destination directory for storing backups.').option('--secret <auth>', 'Authentication secret for firebase. If not supplied, looks for process.env.FIREBASE_SECRET');
+_commander2.default.version(_package2.default.version)
+// Options that apply to all commands
+.option('-f, --firebase <firebase>', 'All commands: Firebase name (e.g. myfirebase, not https://myfirebase.firebaseio.com)').option('-sc, --secret <secret>', 'All commands: Authentication secret for firebase. If not supplied, looks for process.env.FIREBASE_SECRET')
+// Options that apply to only backup command
+.option('-d, --destination <destDir>', 'Backup: destination directory for storing backups.')
+// Options that apply to only restore command
+.option('-a, --all', 'Restore: restore all paths in the source directory.').option('-s, --source <sourceDir>', 'Restore: directory where the files being restored are located.').option('-o, --overwrite', 'Restore: overwrite any values that already exist for a given path.\
+    By default, the restore command does not overwrite values for a path that exists.');
 
 // TODO: make firebase a required option
 _commander2.default.command('backup [collections...]').description('backup a collection or all collections').action(function (collections) {

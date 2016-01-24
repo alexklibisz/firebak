@@ -45,3 +45,5 @@ This is a tool that I've built for a production-grade Firebase project that I'm 
 - unit testing
 - sharding within `$variable` rules
 - `tojson` command for converting the backup csv files back to JSON
+- examples for pushing backup data to S3
+- examples for sending slack notification following a backup

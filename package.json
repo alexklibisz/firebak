@@ -4,12 +4,13 @@
   "description": "Firebase backup and restoration CLI",
   "main": "index.js",
   "scripts": {
+    "clean": "rm bin/*",
     "build": "./node_modules/babel-cli/bin/babel.js src -d bin",
     "test": "test"
   },
-  "main": "./bin/firebak",
+  "main": "./bin/firebak.js",
   "bin": {
-    "firebak": "./bin/firebak"
+    "firebak": "./bin/firebak.js"
   },
   "repository": {
     "type": "git",

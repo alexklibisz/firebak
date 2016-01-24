@@ -32,9 +32,9 @@ This is a tool that I've built for a production-grade Firebase project that I'm 
 ###Usage, Command Reference
 
 ####Terms
-- Collection: a high-level containing multiple objects in Firebase.
+- Collection: a high-level ref containing multiple objects in Firebase.
 - Rule: a rule defining some backup behavior in the Firebase rules just like `.validate`, `.read`, `.write` define security/validation.
-- Path: the `/`-separated path used to access a child. e.g. `users/abc123/name` would access user abc123's name property.
+- Path: the `/`-separated path used to access a child ref. e.g. `users/abc123/name` would access user abc123's name property.
 
 ####Strategy
 

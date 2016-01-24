@@ -122,13 +122,15 @@ async function shardedBackupToFile({ firebase, path, spec, secret, filename }) {
   function storeToFile() {
     const
       paths = keys(store),
-      csvLines = paths.map(path => `"${path}", "${store[path]}"`);
+      // Important that there be no space
+      csvLines = paths.map(path => `"${path}","${store[path]}"`);
     fs.appendFileSync(filename, csvLines.join('\n'), 'utf8');
     store = {};
   }
 
   // Write initial line to file (must use write, not append)
-  fs.writeFileSync(filename, '', 'utf8');
+  // Important that there be no space
+  fs.writeFileSync(filename, '"path","value"\n', 'utf8');
 
   // Call the REST API until you receive fewer results than limitToFirst
   while(count === limitToFirst) {

@@ -62,28 +62,28 @@ export default async function restore({
  */
 export async function restoreFromCSV({ filename, ref, overwrite = false } = {}) {
 
-  const
-    fileContents = fs.readFileSync(filename, 'utf8'),
-    rows = fileContents.split('\n').filter(l => l.length > 0);
-
   async function setIfNull(path, value) {
     const existingValue = await ref.child(path).once('value').then(snap => snap.val());
     return (existingValue === null) ? await ref.child(path).set(value) : existingValue;
   }
 
-  while(rows.length > 0) {
-    const
-      restoreRows = rows.splice(0, 100),
-      promises = restoreRows.map(row => {
-        const
-          path = row.split(', ')[0].replace(/"/g,""),
-          value = row.split(', ')[1].replace(/"/g,"");
-        if (overwrite === true) {
-          return ref.child(path).set(value)
-        } else {
-          return setIfNull(path, value);
-        }
-      });
+  const converter = new (require("csvtojson").Converter)();
+  const fileContents = await new Promise((resolve, reject) => {
+    converter.fromFile(filename , (error, result) => {
+      if (error) reject(error);
+      else resolve(result);
+    });
+  });
+
+  while(fileContents.length > 0) {
+    const promises = fileContents.splice(0, 100).map(object => {
+      const {path, value} = object;
+      if (overwrite) {
+        return ref.child(path).set(value)
+      } else {
+        return setIfNull(path, value);
+      }
+    });
     await Promise.all(promises);
   }
 

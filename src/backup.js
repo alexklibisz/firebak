@@ -213,7 +213,7 @@ async function getBackupSpecs({ firebase, secret }) {
           tail = line.slice(line.indexOf('*/') + 2, line.length);
         return head + tail;
       }
-      return line.trim();
+      return line;
     })
     .join('');
 

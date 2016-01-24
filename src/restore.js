@@ -29,9 +29,8 @@ export default async function restore({
   source = path.resolve('.', source);
 
   if (all) {
-    // TODO: if all is true, get the names of all CSV files in
-    // the passed source directory and push each one into
-    // the collections array.
+    const dir = fs.readdirSync(source);
+    collections = dir.filter(f => f.endsWith('.csv')).map(f => f.split('.').shift());
   }
 
   while (collections.length > 0) {
@@ -67,11 +66,15 @@ export async function restoreFromCSV({ filename, ref, overwrite = false } = {}) 
   // it sets a value at that path.
   async function setIfNull(path, value) {
     const existingValue = await ref.child(path).once('value').then(snap => snap.val());
-    return (existingValue === null) ? await ref.child(path).set(value) : existingValue;
+    if (existingValue === null) {
+      return await ref.child(path).set(value);
+    } else {
+      return existingValue;
+    }
   }
 
   const
-    converter = new (require("csvtojson").Converter)();
+    converter = new (require("csvtojson").Converter)(),
     fileContents = await new Promise((resolve, reject) => {
       converter.fromFile(filename , (error, result) => {
         if (error) reject(error);

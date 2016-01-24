@@ -360,7 +360,7 @@ function getBackupSpecs(_ref4) {
                   tail = line.slice(line.indexOf('*/') + 2, line.length);
               return head + tail;
             }
-            return line.trim();
+            return line;
           }).join('');
 
           // Rules are now in parseable JSON format, convert rules to an object

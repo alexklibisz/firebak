@@ -43,7 +43,7 @@ exports.default = function restore() {
   var secret = _ref.secret;
   var source = _ref.source;
   var overwrite = _ref.overwrite;
-  var ref, authData, introTable, collection, filename;
+  var ref, authData, introTable, dir, collection, filename;
   return regeneratorRuntime.async(function restore$(_context) {
     while (1) {
       switch (_context.prev = _context.next) {
@@ -65,9 +65,13 @@ exports.default = function restore() {
           source = _path2.default.resolve('.', source);
 
           if (all) {
-            // TODO: if all is true, get the names of all CSV files in
-            // the passed source directory and push each one into
-            // the collections array.
+            dir = _fs2.default.readdirSync(source);
+
+            collections = dir.filter(function (f) {
+              return f.endsWith('.csv');
+            }).map(function (f) {
+              return f.split('.').shift();
+            });
           }
 
         case 10:
@@ -121,7 +125,7 @@ function restoreFromCSV() {
   var ref = _ref2.ref;
   var _ref2$overwrite = _ref2.overwrite;
   var overwrite = _ref2$overwrite === undefined ? false : _ref2$overwrite;
-  var setIfNull, converter, promises;
+  var setIfNull, converter, fileContents, promises;
   return regeneratorRuntime.async(function restoreFromCSV$(_context3) {
     while (1) {
       switch (_context3.prev = _context3.next) {
@@ -149,17 +153,12 @@ function restoreFromCSV() {
                     return regeneratorRuntime.awrap(ref.child(path).set(value));
 
                   case 6:
-                    _context2.t0 = _context2.sent;
-                    _context2.next = 10;
-                    break;
+                    return _context2.abrupt('return', _context2.sent);
 
                   case 9:
-                    _context2.t0 = existingValue;
+                    return _context2.abrupt('return', existingValue);
 
                   case 10:
-                    return _context2.abrupt('return', _context2.t0);
-
-                  case 11:
                   case 'end':
                     return _context2.stop();
                 }

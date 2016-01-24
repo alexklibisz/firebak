@@ -55,7 +55,7 @@ exports.default = function backup() {
   var _ref$destination = _ref.destination;
   var destination = _ref$destination === undefined ? './backups/' + new Date().getFullYear() + '/' + (new Date().getMonth() + 1) + '/' + new Date().getDate() + '/' + new Date().getHours() : _ref$destination;
 
-  var maxRequestSize, totalRequestSize, totalObjects, totalDuration, backupSpecs, dirs, currentDir, introTable, _backup, filename, t1, result, t2, tableComplete, table;
+  var maxRequestSize, totalRequestSize, totalObjects, totalDuration, backupRules, dirs, currentDir, introTable, _backup, filename, t1, result, t2, tableComplete, table;
 
   return regeneratorRuntime.async(function backup$(_context) {
     while (1) {
@@ -63,18 +63,18 @@ exports.default = function backup() {
         case 0:
           maxRequestSize = 0, totalRequestSize = 0, totalObjects = 0, totalDuration = 0;
 
-          // By default, use all of the backup specs that are found in the rules file.
+          // By default, use all of the backup rules that are found in the rules file.
 
           _context.next = 3;
-          return regeneratorRuntime.awrap(getBackupSpecs({ firebase: firebase, secret: secret }));
+          return regeneratorRuntime.awrap(getBackupRules({ firebase: firebase, secret: secret }));
 
         case 3:
-          backupSpecs = _context.sent;
+          backupRules = _context.sent;
 
           // If collections are specified, keep only the backup
-          // specs that match a collection name.
+          // rules that match a collection name.
           if (collections.length > 0) {
-            backupSpecs = backupSpecs.filter(function (b) {
+            backupRules = backupRules.filter(function (b) {
               var matches = collections.filter(function (collection) {
                 return collection === b.path;
               });
@@ -100,37 +100,37 @@ exports.default = function backup() {
           // Backup the rules
           console.info(' >> Backup starting: rules');
           _context.next = 15;
-          return regeneratorRuntime.awrap(backupRules({ firebase: firebase, secret: secret, filename: destination + '/rules.json' }));
+          return regeneratorRuntime.awrap(backupSecurityAndRules({ firebase: firebase, secret: secret, filename: destination + '/rules.json' }));
 
         case 15:
           console.info(' >> Backup complete: rules\n\n');
 
-          // Loop through the backup specs using a while loop.
-          // Take the first spec on each iteration.
+          // Loop through the backup rules using a while loop.
+          // Take the first rule on each iteration.
           // Using a while loop so that the await keyword is respected.
           // A for-each loop would launch all of the shardedBackupToFile
           // functions concurrently.
 
         case 16:
-          if (!(backupSpecs.length > 0)) {
+          if (!(backupRules.length > 0)) {
             _context.next = 34;
             break;
           }
 
-          _backup = backupSpecs.shift();
+          _backup = backupRules.shift();
 
           console.info(' >> Backup starting: ' + _backup.path);
 
           filename = destination + '/' + _backup.path + '.csv';
           t1 = new Date().getTime();
           _context.next = 23;
-          return regeneratorRuntime.awrap(shardedBackupToFile({ path: _backup.path, spec: _backup.spec, secret: secret, firebase: firebase, filename: filename }));
+          return regeneratorRuntime.awrap(shardedBackupToFile({ path: _backup.path, rule: _backup.rule, secret: secret, firebase: firebase, filename: filename }));
 
         case 23:
           result = _context.sent;
           t2 = new Date().getTime(), tableComplete = new _cliTable2.default();
 
-          tableComplete.push({ 'file': filename }, { 'rule': _backup.spec }, { 'duration (sec)': (t2 - t1) / 1000 }, { 'max request size (mb)': result.maxRequestSize / 1000000 }, { 'total request size (mb)': result.totalRequestSize / 1000000 }, { 'total objects (not counting nested)': result.totalObjects });
+          tableComplete.push({ 'file': filename }, { 'rule': _backup.rule }, { 'duration (sec)': (t2 - t1) / 1000 }, { 'max request size (mb)': result.maxRequestSize / 1000000 }, { 'total request size (mb)': result.totalRequestSize / 1000000 }, { 'total objects (not counting nested)': result.totalObjects });
 
           console.info(' >> Backup complete: ' + _backup.path);
           console.info(tableComplete.toString() + '\n\n');
@@ -163,7 +163,7 @@ function shardedBackupToFile(_ref2) {
 
   var firebase = _ref2.firebase;
   var path = _ref2.path;
-  var spec = _ref2.spec;
+  var rule = _ref2.rule;
   var secret = _ref2.secret;
   var filename = _ref2.filename;
 
@@ -186,7 +186,7 @@ function shardedBackupToFile(_ref2) {
 
           // Define parameters for retrieving from the REST API
           // limitToFirst must be >= 2, otherwise it will retrieve the same data every time.
-          limitToFirst = Math.max(parseInt(spec.split(':')[2]), 2), allKeys = {};
+          limitToFirst = Math.max(parseInt(rule.split(':')[2]), 2), allKeys = {};
           store = {}, startAt = "", count = limitToFirst, maxRequestSize = 0, totalRequestSize = 0;
 
           // Function for appending the store object data to the CSV file
@@ -281,12 +281,12 @@ function shardedBackupToFile(_ref2) {
   }, null, this);
 }
 
-function backupRules(_ref3) {
+function backupSecurityAndRules(_ref3) {
   var firebase = _ref3.firebase;
   var secret = _ref3.secret;
   var filename = _ref3.filename;
   var rulesResult;
-  return regeneratorRuntime.async(function backupRules$(_context4) {
+  return regeneratorRuntime.async(function backupSecurityAndRules$(_context4) {
     while (1) {
       switch (_context4.prev = _context4.next) {
         case 0:
@@ -312,17 +312,17 @@ function backupRules(_ref3) {
 
 /**
  * Retrieves the security/validation rules for the specified firebase.
- * Looks for keys with string "firebak:", because these define backup specs.
+ * Looks for keys with string "firebak:", because these define backup rules.
  * Returns all of the paths that should be backed up.
  * @param  {[type]} {      firebase      [description]
  * @param  {[type]} secret }             [description]
  * @return {[type]}        [description]
  */
-function getBackupSpecs(_ref4) {
+function getBackupRules(_ref4) {
   var firebase = _ref4.firebase;
   var secret = _ref4.secret;
   var rulesResult, rulesString, rulesObject, backupPaths, findBackupPaths;
-  return regeneratorRuntime.async(function getBackupSpecs$(_context5) {
+  return regeneratorRuntime.async(function getBackupRules$(_context5) {
     while (1) {
       switch (_context5.prev = _context5.next) {
         case 0:
@@ -383,14 +383,14 @@ function getBackupSpecs(_ref4) {
             '/rooms/firebak:shard:10',
             '/room-messages/firebak:shard:1' ] */
 
-          // Return an array of objects with form { children: 'some/path/to/children', spec: 'firebak:shard:10' }
+          // Return an array of objects with form { children: 'some/path/to/children', rule: 'firebak:shard:10' }
           return _context5.abrupt('return', backupPaths.map(function (bp) {
             var split = bp.split('/').filter(function (s) {
               return s.length > 0;
             });
             return {
               path: split.splice(0, Math.max(1, split.length - 1)).join('/'),
-              spec: split.pop()
+              rule: split.pop()
             };
           }));
 

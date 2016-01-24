@@ -27,13 +27,13 @@ export default async function backup({
 
   let maxRequestSize = 0, totalRequestSize = 0, totalObjects = 0, totalDuration = 0;
 
-  // By default, use all of the backup specs that are found in the rules file.
-  let backupSpecs = await getBackupSpecs({ firebase, secret });
+  // By default, use all of the backup rules that are found in the rules file.
+  let backupRules = await getBackupRules({ firebase, secret });
 
   // If collections are specified, keep only the backup
-  // specs that match a collection name.
+  // rules that match a collection name.
   if (collections.length > 0) {
-    backupSpecs = backupSpecs.filter(b => {
+    backupRules = backupRules.filter(b => {
       const matches = collections.filter(collection => collection === b.path);
       if (matches.length > 0) return b;
     });
@@ -54,30 +54,30 @@ export default async function backup({
 
   // Backup the rules
   console.info(' >> Backup starting: rules');
-  await backupRules({ firebase, secret, filename: `${destination}/rules.json` });
+  await backupSecurityAndRules({ firebase, secret, filename: `${destination}/rules.json` });
   console.info(' >> Backup complete: rules\n\n');
 
-  // Loop through the backup specs using a while loop.
-  // Take the first spec on each iteration.
+  // Loop through the backup rules using a while loop.
+  // Take the first rule on each iteration.
   // Using a while loop so that the await keyword is respected.
   // A for-each loop would launch all of the shardedBackupToFile
   // functions concurrently.
-  while(backupSpecs.length > 0) {
-    const backup = backupSpecs.shift();
+  while(backupRules.length > 0) {
+    const backup = backupRules.shift();
 
     console.info(` >> Backup starting: ${backup.path}`);
 
     const
       filename = `${destination}/${backup.path}.csv`,
       t1 = new Date().getTime(),
-      result = await shardedBackupToFile({ path: backup.path, spec: backup.spec, secret, firebase, filename });
+      result = await shardedBackupToFile({ path: backup.path, rule: backup.rule, secret, firebase, filename });
 
     const t2 = new Date().getTime(),
       tableComplete = new Table();
 
     tableComplete.push(
       {'file': filename },
-      {'rule': backup.spec },
+      {'rule': backup.rule },
       {'duration (sec)': (t2 - t1) / 1000 },
       {'max request size (mb)': result.maxRequestSize / 1000000},
       {'total request size (mb)': result.totalRequestSize / 1000000},
@@ -105,10 +105,10 @@ export default async function backup({
   console.info(table.toString());
 }
 
-async function shardedBackupToFile({ firebase, path, spec, secret, filename }) {
+async function shardedBackupToFile({ firebase, path, rule, secret, filename }) {
   // Define parameters for retrieving from the REST API
   // limitToFirst must be >= 2, otherwise it will retrieve the same data every time.
-  const limitToFirst = Math.max(parseInt(spec.split(':')[2]), 2), allKeys = {};
+  const limitToFirst = Math.max(parseInt(rule.split(':')[2]), 2), allKeys = {};
   let
     store = {},
     startAt = "",
@@ -175,7 +175,7 @@ async function shardedBackupToFile({ firebase, path, spec, secret, filename }) {
   return { maxRequestSize, totalRequestSize, totalObjects: keys(allKeys).length };
 }
 
-async function backupRules({ firebase, secret, filename }) {
+async function backupSecurityAndRules({ firebase, secret, filename }) {
   const rulesResult = await ax.get(`https://${firebase}.firebaseio.com/.settings/rules/.json`, {
     params: {
       auth: secret
@@ -186,13 +186,13 @@ async function backupRules({ firebase, secret, filename }) {
 
 /**
  * Retrieves the security/validation rules for the specified firebase.
- * Looks for keys with string "firebak:", because these define backup specs.
+ * Looks for keys with string "firebak:", because these define backup rules.
  * Returns all of the paths that should be backed up.
  * @param  {[type]} {      firebase      [description]
  * @param  {[type]} secret }             [description]
  * @return {[type]}        [description]
  */
-async function getBackupSpecs({ firebase, secret }) {
+async function getBackupRules({ firebase, secret }) {
   // Fetch the rules
   const rulesResult = await ax.get(`https://${firebase}.firebaseio.com/.settings/rules/.json`, {
     params: {
@@ -245,12 +245,12 @@ async function getBackupSpecs({ firebase, secret }) {
     '/rooms/firebak:shard:10',
     '/room-messages/firebak:shard:1' ] */
 
-  // Return an array of objects with form { children: 'some/path/to/children', spec: 'firebak:shard:10' }
+  // Return an array of objects with form { children: 'some/path/to/children', rule: 'firebak:shard:10' }
   return backupPaths.map(bp => {
     const split = bp.split('/').filter(s => s.length > 0);
     return {
       path: split.splice(0, Math.max(1, split.length - 1)).join('/'),
-      spec: split.pop()
+      rule: split.pop()
     }
   });
 }

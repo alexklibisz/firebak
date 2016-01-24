@@ -128,3 +128,7 @@ the backup file would contain:
 - improve the CLI (required options, usage instructions)
 - unit testing
 - sharding within `$variable` rules
+- `tojson` command for converting the backup csv files back to JSON
+- examples for pushing backup data to S3
+- examples for sending slack notification following a backup
+- examples for encrypting backup files

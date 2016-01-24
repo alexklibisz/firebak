@@ -29,15 +29,99 @@ This is a tool that I've built for a production-grade Firebase project that I'm 
 > firebak backup --firebase [name of your firebase] --secret [your secret]  
 > firebak restore --all --source /path/to/backups/directory --firebase [name of your firebase] --secret [your secret]
 
-###Usage and Command Reference
+###Usage, Command Reference
+
+####Terms
+- Collection: a high-level containing multiple objects in Firebase.
+- Rule: a rule defining some backup behavior in the Firebase rules just like `.validate`, `.read`, `.write` define security/validation.
+- Path: the `/`-separated path used to access a child. e.g. `users/abc123/name` would access user abc123's name property.
+
+####Strategy
+
+Firebak requests only parts of each collection at once - also known as sharding. The motivation for this is two-fold:
+1. fit under the firebase request size limit (200MB)
+2. write/read to/from backup files incrementally instead of keeping all of our data in memory.
+
+[Read more about how I came to this solution.](http://alexklibisz.roughdraft.io/3247dcba8c8d7936a0ce-creating-an-effective-firebase-backup-solution)
 
 ####Defining Firebak rules
 
+Firebak uses empty rules in the Firebase rules to define how many items of a certain collection to request at once.
+
+#####`"firebak:shard:n": {}`
+Adding this rule within any collection will tell the firebak backup command to request *n* items at a time. For now this is the only rule and **it must be added to any collection you want to back up**.
+
+Example:
+```
+"users": {
+  ".read": "auth != null",
+  ".indexOn": ["email", "facebookId", "name"],
+  "firebak:shard:100": {},
+  "$userId": {
+    ...
+  }
+},
+```
+
 ####Backup
+
+> firebak backup [options] [collections...]
+
+#####Parameters
+- `collections`: the firebase collections you want to backup
+- `-f, --firebase`: Firebase name (e.g. myfirebase, not https://myfirebase.firebaseio.com)
+- `--secret`: Authentication secret for firebase. If not supplied, looks for env variable FIREBASE_SECRET.
+- `-d, --destination`: The destination directory for your backups. By default backups are stored in `./backups/year/month/day/hour`.
+
+#####Example
+
+> firebak backup users messages --firebase studyloop-stage --secret abcdef123456 --destination ./my/backup/dir
+
+####File storage and format
+
+Firebak stores backups in a simple CSV format with two columns: `path` and `value`. The motivation here is to make restoring as simple as possible by defining an absolute path to your data values.
+
+#####Example
+
+Given the following JSON:
+
+```
+{
+  "users": {
+    "abc": {
+      "name": "Jack",
+      "friends": {
+        "Jill": true
+      }
+    }
+  }
+}
+```
+
+the backup file would contain:
+
+```
+"path","value"
+"users/abc/name","Jack"
+"users/abc/friends/Jill":"true"
+```
 
 ####Restore
 
-###Usage:
+> restore [options] [collections...]
+
+#####Parameters
+- `collections`: the firebase collections you want to backup
+- `-f, --firebase`: Firebase name (e.g. myfirebase, not https://myfirebase.firebaseio.com)
+- `--secret`: Authentication secret for firebase. If not supplied, looks for env variable FIREBASE_SECRET
+- `-s, --source`: directory where the files being restored are located
+- `-r, --rules`: restore rules from the rules.json file in the source directory
+- `-o, --overwrite`: overwrite values at existing paths. By default, restoring only sets a value if that path does not exist.
+- `-a, --all`: restore all paths in the source directory
+
+#####Example
+
+> restore --all --rules --overwrite --firebase studyloop-stage --source ./backups/2016/1/22/10
 
 ###TODO:
 

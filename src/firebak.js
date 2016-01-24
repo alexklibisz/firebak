@@ -29,7 +29,7 @@ program.command('backup [collections...]')
         collections,
         destination: program.destination,
         firebase: program.firebase,
-        secret: program.secret
+        secret: program.secret || process.env.FIREBASE_SECRET
       });
     } catch(error) {
       console.error('error!', error.toString());
@@ -45,7 +45,7 @@ program.command('restore [collections...]')
         collections,
         firebase: program.firebase,
         rules: program.rules,
-        secret: program.secret,
+        secret: program.secret || process.env.FIREBASE_SECRET,
         source: program.source,
         overwrite: program.overwrite
       });

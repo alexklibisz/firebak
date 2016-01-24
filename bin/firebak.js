@@ -41,7 +41,7 @@ _commander2.default.command('backup [collections...]').description('backup a col
       collections: collections,
       destination: _commander2.default.destination,
       firebase: _commander2.default.firebase,
-      secret: _commander2.default.secret
+      secret: _commander2.default.secret || process.env.FIREBASE_SECRET
     });
   } catch (error) {
     console.error('error!', error.toString());
@@ -55,7 +55,7 @@ _commander2.default.command('restore [collections...]').description('restore a c
       collections: collections,
       firebase: _commander2.default.firebase,
       rules: _commander2.default.rules,
-      secret: _commander2.default.secret,
+      secret: _commander2.default.secret || process.env.FIREBASE_SECRET,
       source: _commander2.default.source,
       overwrite: _commander2.default.overwrite
     });

@@ -13,10 +13,6 @@ var _firebase = require('firebase');
 
 var _firebase2 = _interopRequireDefault(_firebase);
 
-var _fireproof = require('fireproof');
-
-var _fireproof2 = _interopRequireDefault(_fireproof);
-
 var _path = require('path');
 
 var _path2 = _interopRequireDefault(_path);
@@ -29,9 +25,11 @@ var _bluebird = require('bluebird');
 
 var _bluebird2 = _interopRequireDefault(_bluebird);
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _cliTable = require('cli-table');
 
-_fireproof2.default.promise = require('bluebird');
+var _cliTable2 = _interopRequireDefault(_cliTable);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 exports.default = function restore() {
   var _ref = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
@@ -44,46 +42,52 @@ exports.default = function restore() {
   var secret = _ref.secret;
   var source = _ref.source;
   var override = _ref.override;
-  var ref, authData, collection, filename;
+  var ref, authData, introTable, collection, filename;
   return regeneratorRuntime.async(function restore$(_context) {
     while (1) {
       switch (_context.prev = _context.next) {
         case 0:
 
           // Get ref and authenticate
-          ref = new _fireproof2.default(new _firebase2.default('https://' + firebase + '.firebaseio.com'));
+          ref = new _firebase2.default('https://' + firebase + '.firebaseio.com');
           _context.next = 3;
           return regeneratorRuntime.awrap(ref.authWithCustomToken(secret));
 
         case 3:
           authData = _context.sent;
+          introTable = new _cliTable2.default();
+
+          introTable.push({ 'date/time': new Date().toLocaleString() });
+          console.info('\n >> Firebak: restore');
+          console.info(introTable.toString());
 
           source = _path2.default.resolve('.', source);
 
-          // if(all) {
-          //   collections = await ax.get(``)
-          // }
-
-        case 5:
+        case 9:
           if (!(collections.length > 0)) {
-            _context.next = 12;
+            _context.next = 17;
             break;
           }
 
           collection = collections.shift(), filename = source + '/' + collection + '.csv';
-          _context.next = 9;
+
+          console.log(' >> Restore starting: ' + collection);
+          _context.next = 14;
           return regeneratorRuntime.awrap(restoreFromCSV({ ref: ref, filename: filename }));
 
-        case 9:
-          console.log('complete: ' + collection);
-          _context.next = 5;
+        case 14:
+          console.log(' >> Restore complete: ' + collection + '\n');
+          _context.next = 9;
           break;
 
-        case 12:
+        case 17:
 
+          // Force exit because otherwise the Firebase
+          // ref remains open and causes the program to hang
+          ref.unauth();
           process.exit(0);
 
-        case 13:
+        case 19:
         case 'end':
           return _context.stop();
       }

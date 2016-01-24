@@ -22,7 +22,6 @@
     "cli-table": "^0.3.1",
     "commander": "^2.9.0",
     "firebase": "^2.4.0",
-    "fireproof": "^3.1.0",
     "lodash": "^4.0.0",
     "object-sizeof": "^1.0.8"
   },

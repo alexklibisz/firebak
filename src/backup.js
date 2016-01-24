@@ -39,7 +39,7 @@ export default async function backup({
 
   const introTable = new Table();
   introTable.push({'date/time': new Date().toLocaleString() });
-  console.info(' >> Firechunk Backup');
+  console.info('\n >> Firebak: Backup');
   console.info(introTable.toString());
 
   // Backup the rules

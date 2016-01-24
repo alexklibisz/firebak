@@ -1,11 +1,10 @@
 'use strict';
 import ax from 'axios';
 import Firebase from 'firebase';
-import Fireproof from 'fireproof';
 import path from 'path';
 import fs from 'fs';
 import Promise from 'bluebird';
-Fireproof.promise = require('bluebird');
+import Table from 'cli-table';
 
 export default async function restore({
   all,
@@ -17,23 +16,30 @@ export default async function restore({
 } = {}) {
 
   // Get ref and authenticate
-  const ref = new Fireproof(new Firebase(`https://${firebase}.firebaseio.com`));
-  const authData = await ref.authWithCustomToken(secret);
+  const
+    ref = new Firebase(`https://${firebase}.firebaseio.com`),
+    authData = await ref.authWithCustomToken(secret);
+
+  // Some info to start
+  const introTable = new Table();
+  introTable.push({'date/time': new Date().toLocaleString() });
+  console.info('\n >> Firebak: restore');
+  console.info(introTable.toString());
 
   source = path.resolve('.', source);
-
-  // if(all) {
-  //   collections = await ax.get(``)
-  // }
 
   while (collections.length > 0) {
     const
       collection = collections.shift(),
       filename = `${source}/${collection}.csv`;
+    console.log(` >> Restore starting: ${collection}`);
     await restoreFromCSV({ ref, filename });
-    console.log(`complete: ${collection}`);
+    console.log(` >> Restore complete: ${collection}\n`);
   }
 
+  // Force exit because otherwise the Firebase
+  // ref remains open and causes the program to hang
+  ref.unauth();
   process.exit(0);
 }
 

@@ -44,3 +44,4 @@ This is a tool that I've built for a production-grade Firebase project that I'm 
 - improve the CLI (required options, usage instructions)
 - unit testing
 - sharding within `$variable` rules
+- `tojson` command for converting the backup csv files back to JSON

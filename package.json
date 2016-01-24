@@ -1,14 +1,13 @@
 {
   "name": "firebak",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Firebase backup and restoration CLI",
-  "main": "index.js",
+  "main": "./bin/firebak.js",
   "scripts": {
     "clean": "rm bin/*",
     "build": "./node_modules/babel-cli/bin/babel.js src -d bin",
     "test": "test"
   },
-  "main": "./bin/firebak.js",
   "bin": {
     "firebak": "./bin/firebak.js"
   },

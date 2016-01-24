@@ -20,6 +20,7 @@ var _restore2 = _interopRequireDefault(_restore);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+require('babel-polyfill');
 Promise = require('bluebird');
 Promise.onPossiblyUnhandledRejection(function (error) {
   console.error(JSON.stringify(error));throw error;

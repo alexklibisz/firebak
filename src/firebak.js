@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+require('babel-polyfill');
 Promise = require('bluebird');
 Promise.onPossiblyUnhandledRejection(function (error) { console.error(JSON.stringify(error)); throw error; });
 import program from 'commander';

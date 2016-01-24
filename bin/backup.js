@@ -175,8 +175,10 @@ function shardedBackupToFile(_ref2) {
         case 0:
           storeToFile = function storeToFile() {
             var paths = (0, _lodash.keys)(store),
-                csvLines = paths.map(function (path) {
-              return '"' + path + '", "' + store[path] + '"';
+
+            // Important that there be no space
+            csvLines = paths.map(function (path) {
+              return '"' + path + '","' + store[path] + '"';
             });
             _fs2.default.appendFileSync(filename, csvLines.join('\n'), 'utf8');
             store = {};
@@ -192,7 +194,8 @@ function shardedBackupToFile(_ref2) {
           // Then clear the store
 
           // Write initial line to file (must use write, not append)
-          _fs2.default.writeFileSync(filename, '', 'utf8');
+          // Important that there be no space
+          _fs2.default.writeFileSync(filename, '"path","value"\n', 'utf8');
 
           // Call the REST API until you receive fewer results than limitToFirst
 

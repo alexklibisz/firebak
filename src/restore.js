@@ -62,18 +62,22 @@ export default async function restore({
  */
 export async function restoreFromCSV({ filename, ref, overwrite = false } = {}) {
 
+  // Function checks if there is already a value at the given path.
+  // If there is a value, it does nothing. If there is no value (null),
+  // it sets a value at that path.
   async function setIfNull(path, value) {
     const existingValue = await ref.child(path).once('value').then(snap => snap.val());
     return (existingValue === null) ? await ref.child(path).set(value) : existingValue;
   }
 
-  const converter = new (require("csvtojson").Converter)();
-  const fileContents = await new Promise((resolve, reject) => {
-    converter.fromFile(filename , (error, result) => {
-      if (error) reject(error);
-      else resolve(result);
+  const
+    converter = new (require("csvtojson").Converter)();
+    fileContents = await new Promise((resolve, reject) => {
+      converter.fromFile(filename , (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      });
     });
-  });
 
   while(fileContents.length > 0) {
     const promises = fileContents.splice(0, 100).map(object => {

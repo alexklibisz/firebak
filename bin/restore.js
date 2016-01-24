@@ -42,7 +42,7 @@ exports.default = function restore() {
   var firebase = _ref$firebase === undefined ? '' : _ref$firebase;
   var secret = _ref.secret;
   var source = _ref.source;
-  var override = _ref.override;
+  var overwrite = _ref.overwrite;
   var ref, authData, introTable, collection, filename;
   return regeneratorRuntime.async(function restore$(_context) {
     while (1) {
@@ -80,7 +80,7 @@ exports.default = function restore() {
 
           console.log(' >> Restore starting: ' + collection);
           _context.next = 15;
-          return regeneratorRuntime.awrap(restoreFromCSV({ ref: ref, filename: filename }));
+          return regeneratorRuntime.awrap(restoreFromCSV({ ref: ref, filename: filename, overwrite: overwrite }));
 
         case 15:
           console.log(' >> Restore complete: ' + collection + '\n');
@@ -119,38 +119,95 @@ function restoreFromCSV() {
 
   var filename = _ref2.filename;
   var ref = _ref2.ref;
-  var _ref2$override = _ref2.override;
-  var override = _ref2$override === undefined ? false : _ref2$override;
-  var fileContents, rows, restoreRows, promises;
-  return regeneratorRuntime.async(function restoreFromCSV$(_context2) {
+  var _ref2$overwrite = _ref2.overwrite;
+  var overwrite = _ref2$overwrite === undefined ? false : _ref2$overwrite;
+  var setIfNull, converter, promises;
+  return regeneratorRuntime.async(function restoreFromCSV$(_context3) {
     while (1) {
-      switch (_context2.prev = _context2.next) {
+      switch (_context3.prev = _context3.next) {
         case 0:
-          fileContents = _fs2.default.readFileSync(filename, 'utf8'), rows = fileContents.split('\n').filter(function (l) {
-            return l.length > 0;
-          });
+          setIfNull = function setIfNull(path, value) {
+            var existingValue;
+            return regeneratorRuntime.async(function setIfNull$(_context2) {
+              while (1) {
+                switch (_context2.prev = _context2.next) {
+                  case 0:
+                    _context2.next = 2;
+                    return regeneratorRuntime.awrap(ref.child(path).once('value').then(function (snap) {
+                      return snap.val();
+                    }));
 
-        case 1:
-          if (!(rows.length > 0)) {
-            _context2.next = 7;
+                  case 2:
+                    existingValue = _context2.sent;
+
+                    if (!(existingValue === null)) {
+                      _context2.next = 9;
+                      break;
+                    }
+
+                    _context2.next = 6;
+                    return regeneratorRuntime.awrap(ref.child(path).set(value));
+
+                  case 6:
+                    _context2.t0 = _context2.sent;
+                    _context2.next = 10;
+                    break;
+
+                  case 9:
+                    _context2.t0 = existingValue;
+
+                  case 10:
+                    return _context2.abrupt('return', _context2.t0);
+
+                  case 11:
+                  case 'end':
+                    return _context2.stop();
+                }
+              }
+            }, null, this);
+          };
+
+          // Function checks if there is already a value at the given path.
+          // If there is a value, it does nothing. If there is no value (null),
+          // it sets a value at that path.
+
+          converter = new (require("csvtojson").Converter)();
+          _context3.next = 4;
+          return regeneratorRuntime.awrap(new _bluebird2.default(function (resolve, reject) {
+            converter.fromFile(filename, function (error, result) {
+              if (error) reject(error);else resolve(result);
+            });
+          }));
+
+        case 4:
+          fileContents = _context3.sent;
+
+        case 5:
+          if (!(fileContents.length > 0)) {
+            _context3.next = 11;
             break;
           }
 
-          restoreRows = rows.splice(0, 100), promises = restoreRows.map(function (row) {
-            var path = row.split(', ')[0].replace(/"/g, ""),
-                value = row.split(', ')[1].replace(/"/g, "");
-            return ref.child(path).set(value);
+          promises = fileContents.splice(0, 100).map(function (object) {
+            var path = object.path;
+            var value = object.value;
+
+            if (overwrite) {
+              return ref.child(path).set(value);
+            } else {
+              return setIfNull(path, value);
+            }
           });
-          _context2.next = 5;
+          _context3.next = 9;
           return regeneratorRuntime.awrap(_bluebird2.default.all(promises));
 
-        case 5:
-          _context2.next = 1;
+        case 9:
+          _context3.next = 5;
           break;
 
-        case 7:
+        case 11:
         case 'end':
-          return _context2.stop();
+          return _context3.stop();
       }
     }
   }, null, this);

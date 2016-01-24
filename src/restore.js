@@ -7,7 +7,7 @@ import Promise from 'bluebird';
 import Table from 'cli-table';
 
 export default async function restore({
-  all,
+  all = false,
   collections = [],
   firebase = '',
   secret,
@@ -27,6 +27,12 @@ export default async function restore({
   console.info(introTable.toString());
 
   source = path.resolve('.', source);
+
+  if (all) {
+    // TODO: if all is true, get the names of all CSV files in
+    // the passed source directory and push each one into
+    // the collections array.
+  }
 
   while (collections.length > 0) {
     const

@@ -34,7 +34,8 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 exports.default = function restore() {
   var _ref = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
-  var all = _ref.all;
+  var _ref$all = _ref.all;
+  var all = _ref$all === undefined ? false : _ref$all;
   var _ref$collections = _ref.collections;
   var collections = _ref$collections === undefined ? [] : _ref$collections;
   var _ref$firebase = _ref.firebase;
@@ -47,14 +48,14 @@ exports.default = function restore() {
     while (1) {
       switch (_context.prev = _context.next) {
         case 0:
-
-          // Get ref and authenticate
           ref = new _firebase2.default('https://' + firebase + '.firebaseio.com');
           _context.next = 3;
           return regeneratorRuntime.awrap(ref.authWithCustomToken(secret));
 
         case 3:
           authData = _context.sent;
+
+          // Some info to start
           introTable = new _cliTable2.default();
 
           introTable.push({ 'date/time': new Date().toLocaleString() });
@@ -63,31 +64,37 @@ exports.default = function restore() {
 
           source = _path2.default.resolve('.', source);
 
-        case 9:
+          if (all) {
+            // TODO: if all is true, get the names of all CSV files in
+            // the passed source directory and push each one into
+            // the collections array.
+          }
+
+        case 10:
           if (!(collections.length > 0)) {
-            _context.next = 17;
+            _context.next = 18;
             break;
           }
 
           collection = collections.shift(), filename = source + '/' + collection + '.csv';
 
           console.log(' >> Restore starting: ' + collection);
-          _context.next = 14;
+          _context.next = 15;
           return regeneratorRuntime.awrap(restoreFromCSV({ ref: ref, filename: filename }));
 
-        case 14:
+        case 15:
           console.log(' >> Restore complete: ' + collection + '\n');
-          _context.next = 9;
+          _context.next = 10;
           break;
 
-        case 17:
+        case 18:
 
           // Force exit because otherwise the Firebase
           // ref remains open and causes the program to hang
           ref.unauth();
           process.exit(0);
 
-        case 19:
+        case 20:
         case 'end':
           return _context.stop();
       }

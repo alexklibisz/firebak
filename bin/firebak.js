@@ -32,7 +32,6 @@ _commander2.default.version(_package2.default.version).option('-f, --firebase <f
 _commander2.default.command('backup [collections...]').description('backup a collection or all collections').action(function (collections) {
   try {
     (0, _backup2.default)({
-      all: _commander2.default.all,
       collections: collections,
       destination: _commander2.default.destination,
       firebase: _commander2.default.firebase,

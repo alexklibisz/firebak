@@ -21,13 +21,23 @@ import Table from 'cli-table';
 export default async function backup({
   firebase = '',
   secret = '',
-  // collections = [],
-  all = false,
+  collections = [],
   destination = `./backups/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${new Date().getDate()}/${new Date().getHours()}`
 } = {}) {
 
-  const backupSpecs = await getBackupSpecs({ firebase, secret });
   let maxRequestSize = 0, totalRequestSize = 0, totalObjects = 0, totalDuration = 0;
+
+  // By default, use all of the backup specs that are found in the rules file.
+  let backupSpecs = await getBackupSpecs({ firebase, secret });
+
+  // If collections are specified, keep only the backup
+  // specs that match a collection name.
+  if (collections.length > 0) {
+    backupSpecs = backupSpecs.filter(b => {
+      const matches = collections.filter(collection => collection === b.path);
+      if (matches.length > 0) return b;
+    });
+  }
 
   // Create the destination directory if it doesn't exist.
   destination = path.resolve('.', destination);
@@ -174,7 +184,7 @@ async function backupRules({ firebase, secret, filename }) {
 
 /**
  * Retrieves the security/validation rules for the specified firebase.
- * Looks for keys with string "backup:", because these define backup specs.
+ * Looks for keys with string "firebak:", because these define backup specs.
  * Returns all of the paths that should be backed up.
  * @param  {[type]} {      firebase      [description]
  * @param  {[type]} secret }             [description]
@@ -209,11 +219,11 @@ async function getBackupSpecs({ firebase, secret }) {
   const rulesObject = JSON.parse(rulesString);
 
   // Recursively visit all paths in the rules object.
-  // Push any paths containing 'backup:' into the backupPaths array.
+  // Push any paths containing 'firebak:' into the backupPaths array.
   // This is similar but not quite the same as flattenObject function.
   const backupPaths = [];
   function findBackupPaths(object, path = '') {
-    if(path.indexOf('backup:') > -1) {
+    if(path.indexOf('firebak:') > -1) {
       backupPaths.push(path);
     }
     keys(object).forEach(key => {
@@ -226,14 +236,14 @@ async function getBackupSpecs({ firebase, secret }) {
   findBackupPaths(rulesObject.rules);
 
   /* Sample backupPaths after calling findBackupPaths():
-    [ '/users/backup:shard:20',
-    '/user-settings/backup:shard:20',
-    '/courses/backup:shard:20',
-    '/universities/backup:shard:20',
-    '/rooms/backup:shard:10',
-    '/room-messages/backup:shard:1' ] */
+    [ '/users/firebak:shard:20',
+    '/user-settings/firebak:shard:20',
+    '/courses/firebak:shard:20',
+    '/universities/firebak:shard:20',
+    '/rooms/firebak:shard:10',
+    '/room-messages/firebak:shard:1' ] */
 
-  // Return an array of objects with form { children: 'some/path/to/children', spec: 'backup:shard:10' }
+  // Return an array of objects with form { children: 'some/path/to/children', spec: 'firebak:shard:10' }
   return backupPaths.map(bp => {
     const split = bp.split('/').filter(s => s.length > 0);
     return {

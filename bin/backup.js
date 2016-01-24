@@ -50,28 +50,39 @@ exports.default = function backup() {
   var firebase = _ref$firebase === undefined ? '' : _ref$firebase;
   var _ref$secret = _ref.secret;
   var secret = _ref$secret === undefined ? '' : _ref$secret;
-  var _ref$all = _ref.all;
-  var
-  // collections = [],
-  all = _ref$all === undefined ? false : _ref$all;
+  var _ref$collections = _ref.collections;
+  var collections = _ref$collections === undefined ? [] : _ref$collections;
   var _ref$destination = _ref.destination;
   var destination = _ref$destination === undefined ? './backups/' + new Date().getFullYear() + '/' + (new Date().getMonth() + 1) + '/' + new Date().getDate() + '/' + new Date().getHours() : _ref$destination;
 
-  var backupSpecs, maxRequestSize, totalRequestSize, totalObjects, totalDuration, dirs, currentDir, introTable, _backup, filename, t1, result, t2, tableComplete, table;
+  var maxRequestSize, totalRequestSize, totalObjects, totalDuration, backupSpecs, dirs, currentDir, introTable, _backup, filename, t1, result, t2, tableComplete, table;
 
   return regeneratorRuntime.async(function backup$(_context) {
     while (1) {
       switch (_context.prev = _context.next) {
         case 0:
-          _context.next = 2;
-          return regeneratorRuntime.awrap(getBackupSpecs({ firebase: firebase, secret: secret }));
-
-        case 2:
-          backupSpecs = _context.sent;
           maxRequestSize = 0, totalRequestSize = 0, totalObjects = 0, totalDuration = 0;
 
-          // Create the destination directory if it doesn't exist.
+          // By default, use all of the backup specs that are found in the rules file.
 
+          _context.next = 3;
+          return regeneratorRuntime.awrap(getBackupSpecs({ firebase: firebase, secret: secret }));
+
+        case 3:
+          backupSpecs = _context.sent;
+
+          // If collections are specified, keep only the backup
+          // specs that match a collection name.
+          if (collections.length > 0) {
+            backupSpecs = backupSpecs.filter(function (b) {
+              var matches = collections.filter(function (collection) {
+                return collection === b.path;
+              });
+              if (matches.length > 0) return b;
+            });
+          }
+
+          // Create the destination directory if it doesn't exist.
           destination = _path2.default.resolve('.', destination);
           dirs = destination.split('/'), currentDir = '';
 
@@ -88,10 +99,10 @@ exports.default = function backup() {
 
           // Backup the rules
           console.info(' >> Backup starting: rules');
-          _context.next = 14;
+          _context.next = 15;
           return regeneratorRuntime.awrap(backupRules({ firebase: firebase, secret: secret, filename: destination + '/rules.json' }));
 
-        case 14:
+        case 15:
           console.info(' >> Backup complete: rules\n\n');
 
           // Loop through the backup specs using a while loop.
@@ -100,9 +111,9 @@ exports.default = function backup() {
           // A for-each loop would launch all of the shardedBackupToFile
           // functions concurrently.
 
-        case 15:
+        case 16:
           if (!(backupSpecs.length > 0)) {
-            _context.next = 33;
+            _context.next = 34;
             break;
           }
 
@@ -112,10 +123,10 @@ exports.default = function backup() {
 
           filename = destination + '/' + _backup.path + '.csv';
           t1 = new Date().getTime();
-          _context.next = 22;
+          _context.next = 23;
           return regeneratorRuntime.awrap(shardedBackupToFile({ path: _backup.path, spec: _backup.spec, secret: secret, firebase: firebase, filename: filename }));
 
-        case 22:
+        case 23:
           result = _context.sent;
           t2 = new Date().getTime(), tableComplete = new _cliTable2.default();
 
@@ -129,17 +140,17 @@ exports.default = function backup() {
           totalRequestSize += result.totalRequestSize;
           totalObjects += result.totalObjects;
           totalDuration += (t2 - t1) / 1000;
-          _context.next = 15;
+          _context.next = 16;
           break;
 
-        case 33:
+        case 34:
           table = new _cliTable2.default();
 
           table.push({ 'total duration (sec)': totalDuration }, { 'max request size (mb)': maxRequestSize / 1000000 }, { 'total request size (mb)': totalRequestSize / 1000000 }, { 'total objects (not counting nested)': totalObjects });
           console.info(' >> Backup complete: all collections');
           console.info(table.toString());
 
-        case 37:
+        case 38:
         case 'end':
           return _context.stop();
       }
@@ -298,7 +309,7 @@ function backupRules(_ref3) {
 
 /**
  * Retrieves the security/validation rules for the specified firebase.
- * Looks for keys with string "backup:", because these define backup specs.
+ * Looks for keys with string "firebak:", because these define backup specs.
  * Returns all of the paths that should be backed up.
  * @param  {[type]} {      firebase      [description]
  * @param  {[type]} secret }             [description]
@@ -315,7 +326,7 @@ function getBackupSpecs(_ref4) {
           findBackupPaths = function findBackupPaths(object) {
             var path = arguments.length <= 1 || arguments[1] === undefined ? '' : arguments[1];
 
-            if (path.indexOf('backup:') > -1) {
+            if (path.indexOf('firebak:') > -1) {
               backupPaths.push(path);
             }
             (0, _lodash.keys)(object).forEach(function (key) {
@@ -354,7 +365,7 @@ function getBackupSpecs(_ref4) {
           rulesObject = JSON.parse(rulesString);
 
           // Recursively visit all paths in the rules object.
-          // Push any paths containing 'backup:' into the backupPaths array.
+          // Push any paths containing 'firebak:' into the backupPaths array.
           // This is similar but not quite the same as flattenObject function.
 
           backupPaths = [];
@@ -362,14 +373,14 @@ function getBackupSpecs(_ref4) {
           findBackupPaths(rulesObject.rules);
 
           /* Sample backupPaths after calling findBackupPaths():
-            [ '/users/backup:shard:20',
-            '/user-settings/backup:shard:20',
-            '/courses/backup:shard:20',
-            '/universities/backup:shard:20',
-            '/rooms/backup:shard:10',
-            '/room-messages/backup:shard:1' ] */
+            [ '/users/firebak:shard:20',
+            '/user-settings/firebak:shard:20',
+            '/courses/firebak:shard:20',
+            '/universities/firebak:shard:20',
+            '/rooms/firebak:shard:10',
+            '/room-messages/firebak:shard:1' ] */
 
-          // Return an array of objects with form { children: 'some/path/to/children', spec: 'backup:shard:10' }
+          // Return an array of objects with form { children: 'some/path/to/children', spec: 'firebak:shard:10' }
           return _context5.abrupt('return', backupPaths.map(function (bp) {
             var split = bp.split('/').filter(function (s) {
               return s.length > 0;

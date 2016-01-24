@@ -21,7 +21,6 @@ program.command('backup [collections...]')
   .action((collections) => {
     try {
       backup({
-        all: program.all,
         collections,
         destination: program.destination,
         firebase: program.firebase,

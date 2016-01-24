@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 'use strict';
 Promise = require('bluebird');
 Promise.onPossiblyUnhandledRejection(function (error) { console.error(JSON.stringify(error)); throw error; });

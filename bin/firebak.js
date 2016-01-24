@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 'use strict';
 
 var _commander = require('commander');

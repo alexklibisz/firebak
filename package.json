@@ -1,6 +1,6 @@
 {
   "name": "firebak",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Firebase backup and restoration CLI",
   "main": "node ./bin/firebak.js",
   "scripts": {

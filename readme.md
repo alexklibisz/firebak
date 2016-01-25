@@ -4,6 +4,10 @@ Firebase backup and restore utility. Define the data you want to backup in your 
 
 ***
 
+> npm i -g firebak
+
+***
+
 ###Intended Use cases
 - backing up Firebases that are too large to simply export the root file.
 - backing up small to medium Firebases (anything up to the Bonfire plan which actually includes backups).

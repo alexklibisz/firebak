@@ -22,7 +22,7 @@ export default async function backup({
   firebase = '',
   secret = '',
   collections = [],
-  destination = `./backups/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${new Date().getDate()}/${new Date().getHours()}`
+  destination = `./backups/${new Date().getFullYear()}.${('0' + (new Date().getMonth() + 1)).slice(-2)}.${('0' + new Date().getDate()).slice(-2)}.${new Date().getHours()}`
 } = {}) {
 
   let maxRequestSize = 0, totalRequestSize = 0, totalObjects = 0, totalDuration = 0;

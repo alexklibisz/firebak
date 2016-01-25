@@ -53,7 +53,7 @@ exports.default = function backup() {
   var _ref$collections = _ref.collections;
   var collections = _ref$collections === undefined ? [] : _ref$collections;
   var _ref$destination = _ref.destination;
-  var destination = _ref$destination === undefined ? './backups/' + new Date().getFullYear() + '/' + (new Date().getMonth() + 1) + '/' + new Date().getDate() + '/' + new Date().getHours() : _ref$destination;
+  var destination = _ref$destination === undefined ? './backups/' + new Date().getFullYear() + '.' + ('0' + (new Date().getMonth() + 1)).slice(-2) + '.' + ('0' + new Date().getDate()).slice(-2) + '.' + new Date().getHours() : _ref$destination;
 
   var maxRequestSize, totalRequestSize, totalObjects, totalDuration, backupRules, dirs, currentDir, introTable, _backup, filename, t1, result, t2, tableComplete, table;
 

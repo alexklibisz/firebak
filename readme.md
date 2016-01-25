@@ -2,13 +2,21 @@
 
 Firebase backup and restore utility. Define the data you want to backup in your Firebase security rules. Backups and restore data incrementally (sharding requests) so as not to exceed Firebase request limits.
 
+***
+
 ###Intended Use cases
 - backing up Firebases that are too large to simply export the root file.
 - backing up small to medium Firebases (anything up to the Bonfire plan which actually includes backups).
 - running backups with minimal memory usage on a cheap cloud instance (e.g. AWS EC2 micro instance) and pushing the files to cloud storage (e.g. AWS S3).
 
+***
+***
+
 ###Fair warning: work in progress
 This is a tool that I've built for a production-grade Firebase project that I'm on. That being said, it should still be considered a work-in-progress, and you should test it extensively for your use-case before committing to it. This is not in any way supported by Firebase. Obviously, I'm not responsible for any data loss that results from the use of this tool.
+
+***
+***
 
 ###Getting Started
 
@@ -29,12 +37,17 @@ This is a tool that I've built for a production-grade Firebase project that I'm 
 > firebak backup --firebase [name of your firebase] --secret [your secret]  
 > firebak restore --all --source /path/to/backups/directory --firebase [name of your firebase] --secret [your secret]
 
+***
+***
+
 ###Usage, Command Reference
 
 ####Terms
 - Collection: a high-level ref containing multiple objects in Firebase.
 - Rule: a rule defining some backup behavior in the Firebase rules just like `.validate`, `.read`, `.write` define security/validation.
 - Path: the `/`-separated path used to access a child ref. e.g. `users/abc123/name` would access user abc123's name property.
+
+***
 
 ####Strategy
 
@@ -43,6 +56,8 @@ Firebak requests only parts of each collection at once - also known as sharding.
 2. write/read to/from backup files incrementally instead of keeping all of our data in memory.
 
 [Read more about how I came to this solution.](http://alexklibisz.roughdraft.io/3247dcba8c8d7936a0ce-creating-an-effective-firebase-backup-solution)
+
+***
 
 ####Defining Firebak rules
 
@@ -63,6 +78,8 @@ Example:
 },
 ```
 
+***
+
 ####Backup
 
 > firebak backup [options] [collections...]
@@ -76,6 +93,8 @@ Example:
 #####Example
 
 > firebak backup users messages --firebase studyloop-stage --secret abcdef123456 --destination ./my/backup/dir
+
+***
 
 ####File storage and format
 
@@ -106,6 +125,8 @@ the backup file would contain:
 "users/abc/friends/Jill":"true"
 ```
 
+***
+
 ####Restore
 
 > restore [options] [collections...]
@@ -123,6 +144,8 @@ the backup file would contain:
 
 > restore --all --rules --overwrite --firebase studyloop-stage --source ./backups/2016/1/22/10
 
+***
+
 ####Pushing backups to AWS S3
 Backups can be pushed to AWS S3 or similar file hosting service. There is a script at `src/firebak-s3.sh` that does this.
 
@@ -130,12 +153,14 @@ Backups can be pushed to AWS S3 or similar file hosting service. There is a scri
 
 This will find the most recently modified directory in the backups directory, tar that directory, and push it to s3. It assumes that you have the AWS CLI configured (`aws configure`) with a user that has S3 write permissions enabled;
 
+***
+***
+
 ###TODO:
 
 - improve the CLI (required options, usage instructions)
 - unit testing
 - sharding within `$variable` rules
 - `tojson` command for converting the backup csv files back to JSON
-- examples for pushing backup data to S3
 - examples for sending slack notification following a backup
 - examples for encrypting backup files

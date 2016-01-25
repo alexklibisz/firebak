@@ -123,6 +123,13 @@ the backup file would contain:
 
 > restore --all --rules --overwrite --firebase studyloop-stage --source ./backups/2016/1/22/10
 
+####Pushing backups to AWS S3
+Backups can be pushed to AWS S3 or similar file hosting service. There is a script at `src/firebak-s3.sh` that does this.
+
+> ./src/firebak-s3.sh <backups directory e.g. ./backups> <s3 path e.g. s3://mybucket/some-dir/>
+
+This will find the most recently modified directory in the backups directory, tar that directory, and push it to s3. It assumes that you have the AWS CLI configured (`aws configure`) with a user that has S3 write permissions enabled;
+
 ###TODO:
 
 - improve the CLI (required options, usage instructions)

@@ -8,7 +8,10 @@
     "build": "./node_modules/babel-cli/bin/babel.js src -d bin && chmod +x bin/firebak.js",
     "test": "test"
   },
-  "bin": "bin/firebak.js",
+  "bin": {
+    "firebak": "bin/firebak.js",
+    "firebak-s3": "src/firebak-s3.sh"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/alexklibisz/firebak.git"

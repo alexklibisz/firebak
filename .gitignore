@@ -2,3 +2,4 @@ node_modules
 backups
 tarred
 npm-debug.log
+firebak*.tgz

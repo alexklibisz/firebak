@@ -1,5 +1,11 @@
 # FireBak
 
+## DEPRECATED
+
+Sorry, I'm no longer working with Firebase and through school and work don't have the time to maintain this module.
+
+***
+
 Firebase backup and restore utility. Define the data you want to backup in your Firebase security rules. Backups and restore data incrementally (sharding requests) so as not to exceed Firebase request limits.
 
 ***

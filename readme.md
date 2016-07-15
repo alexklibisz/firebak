@@ -1,4 +1,4 @@
-# FireBak
+# FireBak (deprecated)
 
 ## DEPRECATED
 
